@@ -18,6 +18,8 @@ starter/.rasa/
 starter/models/
 starter/results/
 starter/voice/audio/
+rasa_bot/.rasa/
+rasa_bot/models/
 
 # Node / frontend
 node_modules/

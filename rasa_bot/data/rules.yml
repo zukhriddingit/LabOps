@@ -1,0 +1,88 @@
+version: "3.1"
+
+rules:
+  - rule: Greet
+    steps:
+      - intent: greet
+      - action: utter_greet
+
+  - rule: Goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
+
+  - rule: Move sample
+    steps:
+      - intent: move_sample
+      - action: action_move_sample
+
+  - rule: Validate calculation
+    steps:
+      - intent: validate_lab_calculation
+      - action: action_validate_lab_calculation
+
+  - rule: Find inventory
+    steps:
+      - intent: find_inventory
+      - action: action_find_inventory
+
+  - rule: Retrieve SOP
+    steps:
+      - intent: retrieve_sop
+      - action: action_retrieve_lab_sop
+
+  - rule: Draft emergency
+    steps:
+      - intent: draft_emergency_message
+      - action: action_draft_emergency_message
+
+  - rule: Confirm pending emergency
+    condition:
+      - slot_was_set:
+          - emergency_message_pending: true
+    steps:
+      - intent: confirm_emergency_message
+      - action: action_send_emergency_message
+
+  - rule: Cancel pending emergency
+    condition:
+      - slot_was_set:
+          - emergency_message_pending: true
+    steps:
+      - intent: cancel_emergency_message
+      - action: action_cancel_emergency_message
+
+  - rule: Generate handoff
+    steps:
+      - intent: generate_handoff
+      - action: action_generate_lab_handoff
+
+  - rule: Get lab state
+    steps:
+      - intent: get_lab_state
+      - action: action_get_lab_state
+
+  - rule: Log daily activity
+    steps:
+      - intent: log_daily_activity
+      - action: action_log_daily_activity
+
+  - rule: Get person daily activity
+    steps:
+      - intent: get_person_daily_activity
+      - action: action_get_person_daily_activity
+
+  - rule: Create reminder
+    steps:
+      - intent: create_reminder
+      - action: action_create_lab_reminder
+
+  - rule: NLU fallback
+    steps:
+      - intent: nlu_fallback
+      - action: utter_fallback
+
+  - rule: Explicit fallback
+    steps:
+      - intent: fallback
+      - action: utter_fallback
