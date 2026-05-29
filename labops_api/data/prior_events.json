@@ -1,0 +1,26 @@
+[
+  {
+    "id": "prior_1",
+    "equipment_id": "freezer_b",
+    "issue_type": "temperature_excursion",
+    "timestamp": "2026-05-17T03:22:00Z",
+    "summary": "Freezer B temperature excursion 12 days ago.",
+    "recorded_cause": "blocked ventilation — intake vent obstructed by supply boxes stacked against the unit",
+    "resolution": "Facilities cleared the intake vent; temperature returned to -80°C within 45 minutes",
+    "duration_hours": 3.0,
+    "source_type": "human_confirmed",
+    "confidence": "high"
+  },
+  {
+    "id": "prior_2",
+    "equipment_id": "centrifuge_2",
+    "issue_type": "centrifuge_error",
+    "timestamp": "2026-05-10T11:05:00Z",
+    "summary": "Centrifuge 2 error code 42 — rotor imbalance detected.",
+    "recorded_cause": "uneven sample loading across rotor positions",
+    "resolution": "Rotor rebalanced; centrifuge recalibrated and returned to service",
+    "duration_hours": 1.5,
+    "source_type": "human_confirmed",
+    "confidence": "high"
+  }
+]

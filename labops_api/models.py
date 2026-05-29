@@ -1,7 +1,7 @@
 """Pydantic models for LabOps Guardian.
 
-Every stored fact carries a `source_type` + `confidence` (the "truth state" system from
-shared/api_contract.md) so the agent never presents a guess as a confirmed fact.
+Every stored fact carries a `source_type` + `confidence` (truth-state system) so the
+agent never presents a camera-guess or hypothesis as a confirmed fact.
 """
 
 from __future__ import annotations
@@ -21,9 +21,29 @@ SourceType = Literal[
     "stale",
 ]
 Confidence = Literal["high", "medium", "low"]
+Severity = Literal["low", "medium", "high", "critical"]
 
 
-# ── Stored objects ────────────────────────────────────────────────────────────
+# ── Core stored objects ───────────────────────────────────────────────────────
+
+class NormalRange(BaseModel):
+    min: float
+    max: float
+    unit: str = "C"
+
+
+class Equipment(BaseModel):
+    id: str
+    name: str
+    kind: str
+    current_temperature: Optional[str] = None
+    status: str = "ok"                         # ok | alarm | error | idle
+    normal_range: Optional[NormalRange] = None
+    source_type: SourceType = "observed_by_sensor"
+    confidence: Confidence = "high"
+    updated_at: Optional[str] = None
+
+
 class Sample(BaseModel):
     sample_id: str
     name: str
@@ -37,15 +57,42 @@ class Sample(BaseModel):
     updated_at: Optional[str] = None
 
 
-class Equipment(BaseModel):
-    id: str
-    name: str
-    kind: str
-    current_temperature: Optional[str] = None
-    status: str = "ok"
-    source_type: SourceType = "observed_by_sensor"
-    confidence: Confidence = "high"
+class Incident(BaseModel):
+    incident_id: str
+    type: str                                  # temperature_excursion | centrifuge_error | ...
+    equipment_id: str
+    severity: Severity = "high"
+    status: Literal["open", "investigating", "resolved"] = "open"
+    current_value: Optional[str] = None
+    threshold: Optional[str] = None
+    observations: list[str] = Field(default_factory=list)
+    tickets: list[str] = Field(default_factory=list)
+    created_at: str
     updated_at: Optional[str] = None
+
+
+class Ticket(BaseModel):
+    ticket_id: str
+    incident_id: str
+    summary: Optional[str] = None
+    severity: str
+    assigned_to: str
+    status: str = "open"
+    notes: Optional[str] = None
+    created_at: str
+
+
+class PriorEvent(BaseModel):
+    id: str
+    equipment_id: str
+    issue_type: str
+    timestamp: str
+    summary: Optional[str] = None
+    recorded_cause: Optional[str] = None
+    resolution: Optional[str] = None
+    duration_hours: Optional[float] = None
+    source_type: SourceType = "human_confirmed"
+    confidence: Confidence = "high"
 
 
 class InventoryItem(BaseModel):
@@ -98,6 +145,50 @@ class ExperimentRun(BaseModel):
 
 
 # ── Request bodies ────────────────────────────────────────────────────────────
+
+class EventRequest(BaseModel):
+    type: str
+    equipment_id: Optional[str] = None
+    value: Optional[float] = None
+    unit: str = "C"
+    payload: dict[str, Any] = Field(default_factory=dict)
+    source_type: SourceType = "observed_by_sensor"
+    confidence: Confidence = "high"
+    timestamp: Optional[str] = None
+
+
+class RetrieveSopRequest(BaseModel):
+    issue_type: Optional[str] = None
+    equipment_id: Optional[str] = None
+    query: Optional[str] = None          # fallback free-text search
+    sample_id: Optional[str] = None
+
+
+class CreateTicketRequest(BaseModel):
+    incident_id: str
+    summary: Optional[str] = None
+    severity: str = "high"
+    assigned_to: str = "Facilities"
+    notes: Optional[str] = None
+
+
+class RecallHistoryRequest(BaseModel):
+    equipment_id: str
+    issue_type: Optional[str] = None
+
+
+class CreateIncidentRequest(BaseModel):
+    type: str
+    equipment_id: str
+    severity: Severity = "high"
+    current_value: Optional[str] = None
+    threshold: Optional[str] = None
+
+
+class AddObservationRequest(BaseModel):
+    observation: str
+
+
 class MoveSampleRequest(BaseModel):
     from_location: Optional[str] = None
     to_location: str
@@ -110,11 +201,6 @@ class ValidateCalculationRequest(BaseModel):
     target_percent: Optional[float] = None
     final_volume_ml: Optional[float] = None
     user_answer_ul: Optional[float] = None
-
-
-class RetrieveSopRequest(BaseModel):
-    query: str
-    sample_id: Optional[str] = None
 
 
 class FindInventoryRequest(BaseModel):
@@ -134,11 +220,5 @@ class SendEmergencyMessageRequest(BaseModel):
 
 
 class GenerateHandoffRequest(BaseModel):
+    incident_id: Optional[str] = None
     shift: Optional[str] = None
-
-
-class EventRequest(BaseModel):
-    type: str
-    payload: dict[str, Any] = Field(default_factory=dict)
-    source_type: SourceType = "user_reported"
-    confidence: Confidence = "medium"

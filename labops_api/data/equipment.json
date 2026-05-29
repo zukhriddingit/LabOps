@@ -2,12 +2,32 @@
   {
     "id": "freezer_b",
     "name": "Freezer B",
-    "kind": "freezer",
-    "current_temperature": "-60C",
+    "kind": "ultra_low_freezer",
+    "current_temperature": "-80C",
     "status": "ok",
+    "normal_range": {
+      "min": -90,
+      "max": -70,
+      "unit": "C"
+    },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-29T18:41:09+00:00"
+  },
+  {
+    "id": "freezer_d",
+    "name": "Freezer D (Backup)",
+    "kind": "ultra_low_freezer",
+    "current_temperature": "-81C",
+    "status": "ok",
+    "normal_range": {
+      "min": -90,
+      "max": -70,
+      "unit": "C"
+    },
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T00:00:00+00:00"
   },
   {
     "id": "bench_2",
@@ -15,9 +35,10 @@
     "kind": "bench",
     "current_temperature": "21C",
     "status": "ok",
+    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-29T00:00:00+00:00"
   },
   {
     "id": "centrifuge_2",
@@ -25,9 +46,10 @@
     "kind": "centrifuge",
     "current_temperature": null,
     "status": "idle",
+    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-29T00:00:00+00:00"
   },
   {
     "id": "microscope_1",
@@ -35,9 +57,10 @@
     "kind": "microscope",
     "current_temperature": null,
     "status": "idle",
+    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-29T00:00:00+00:00"
   },
   {
     "id": "shelf_a",
@@ -45,8 +68,9 @@
     "kind": "shelf",
     "current_temperature": null,
     "status": "ok",
+    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-29T00:00:00+00:00"
   }
 ]
