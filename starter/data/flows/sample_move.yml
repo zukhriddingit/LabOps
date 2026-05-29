@@ -1,0 +1,28 @@
+flows:
+  move_sample:
+    description: >
+      Log that a researcher is moving a sample out of cold storage onto a bench (or between
+      locations) and start the room-temperature cold-chain timer. Triggers when the user says
+      they are taking, removing, moving, or placing a sample, e.g. "I'm taking C17 out of
+      minus 60 onto Bench 2 for 20 minutes."
+    steps:
+      - collect: sample_id
+        description: The sample identifier, e.g. C17.
+      - collect: to_location
+        description: Where the sample is being placed, e.g. "Bench 2".
+      - collect: from_location
+        description: Where the sample is coming from, e.g. "Freezer B". Ask only if unclear.
+        ask_before_filling: false
+      - collect: allowed_room_temp_minutes
+        description: How many minutes the sample may stay at room temperature, e.g. 20.
+      - action: action_move_sample
+        next:
+          - if: slots.labops_available
+            then:
+              - action: utter_sample_logged
+                next: wrap_up
+          - else:
+              - action: utter_labops_unavailable
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else

@@ -1,0 +1,39 @@
+# endpoints.yml — where LabOps Guardian connects to the outside world.
+#
+# LLM inference runs on Nebius Token Factory (https://tokenfactory.nebius.com), which is
+# OpenAI-compatible, so Rasa talks to it via the `self-hosted` provider.
+#
+# IMPORTANT (read at the event):
+#   • Copy the EXACT model id and base URL from your Nebius console. A wrong model id is the
+#     #1 cause of a dead demo. Some models are region-pinned (e.g. us-central1).
+#   • The lab work is done by the LabOps API (http://localhost:8000), called from the custom
+#     actions in actions/. Set LABOPS_API_URL in .env if it runs elsewhere.
+
+action_endpoint:
+  actions_module: "actions"
+
+model_groups:
+  # ── Command Generator brain ────────────────────────────────────────────────
+  # Must follow instructions precisely and emit clean Rasa commands.
+  # Good picks on Nebius: Qwen3-235B-A22B-Instruct-2507, gpt-oss-120b, DeepSeek-V3.2.
+  - id: nebius_command_llm
+    models:
+      - provider: self-hosted
+        model: Qwen/Qwen3-235B-A22B-Instruct-2507
+        api_base: "https://api.tokenfactory.nebius.com/v1"
+        api_key: ${NEBIUS_API_KEY}
+        temperature: 0.0
+        max_tokens: 1024
+        timeout: 30
+
+# Natural, less-robotic phrasing for spoken replies. Uses the command LLM.
+nlg:
+  type: rephrase
+  summarize_history: false
+  llm:
+    model_group: nebius_command_llm
+
+# Voice is driven by the small Python client in voice/ (Speechmatics ASR + Rime TTS over
+# Rasa's REST webhook), so no native voice channel block is needed here.
+interaction_handling:
+  global_silence_timeout: 7

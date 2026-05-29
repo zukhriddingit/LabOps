@@ -1,0 +1,47 @@
+version: "3.1"
+
+actions:
+  - action_send_emergency_message
+  - action_create_lab_reminder
+
+slots:
+  recipient_role:
+    type: text
+    mappings:
+      - type: from_llm
+  emergency_message:
+    type: text
+    mappings:
+      - type: from_llm
+  message_confirmed:
+    type: bool
+    mappings:
+      - type: from_llm
+  message_status:
+    type: text
+    mappings:
+      - type: controlled
+  # Used by action_create_lab_reminder (manual reminders).
+  reminder_label:
+    type: text
+    mappings:
+      - type: from_llm
+  reminder_due_at:
+    type: text
+    mappings:
+      - type: from_llm
+
+responses:
+  utter_ask_recipient_role:
+    - text: "Who should I message — the postdoc or the PI?"
+  utter_ask_emergency_message:
+    - text: "What should the message say?"
+  utter_ask_message_confirmed:
+    - text: "Should I send it?"
+  utter_confirm_emergency_message:
+    - text: >-
+        Draft to the {recipient_role}: "{emergency_message}" — confirm and I'll send it.
+  utter_message_sent:
+    - text: "Sent to the {recipient_role}."
+  utter_message_cancelled:
+    - text: "Okay, I won't send it. Tell me if you want to edit the draft."

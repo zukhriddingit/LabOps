@@ -1,0 +1,18 @@
+flows:
+  generate_handoff:
+    description: >
+      Produce a structured shift handoff summarising sample status, timers, calculations
+      checked, SOPs retrieved, inventory lookups, messages, and unresolved risks. Triggers when
+      the user asks for a handoff, a summary, an end-of-shift report, or to brief the next shift.
+    steps:
+      - action: action_generate_lab_handoff
+        next:
+          - if: slots.labops_available
+            then:
+              - action: utter_handoff
+                next: wrap_up
+          - else:
+              - action: utter_labops_unavailable
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else

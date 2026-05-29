@@ -1,0 +1,32 @@
+# End-to-end test for the sample-move flow.
+# Custom actions are stubbed so this runs without the action server or the LabOps API:
+#   RASA_PRO_BETA_STUB_CUSTOM_ACTION=true rasa test e2e tests/e2e
+
+stub_custom_actions:
+  action_move_sample:
+    events:
+      - event: slot
+        name: labops_available
+        value: true
+      - event: slot
+        name: sample_id
+        value: "C17"
+
+test_cases:
+  - test_case: researcher logs a sample move to the bench
+    steps:
+      - user: "Guardian, I'm taking Cardio Sample C17 out of minus 60 and putting it on Bench 2. It can stay at room temperature for 20 minutes."
+        assertions:
+          - flow_started:
+              operator: "all"
+              flow_ids:
+                - move_sample
+          - slot_was_set:
+              - name: sample_id
+                value: "C17"
+              - name: to_location
+      - user: "It came out of Freezer B."
+        assertions:
+          - action_executed: action_move_sample
+          - bot_uttered:
+              utter_name: utter_sample_logged

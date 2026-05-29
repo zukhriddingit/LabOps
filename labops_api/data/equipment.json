@@ -1,0 +1,52 @@
+[
+  {
+    "id": "freezer_b",
+    "name": "Freezer B",
+    "kind": "freezer",
+    "current_temperature": "-60C",
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "id": "bench_2",
+    "name": "Bench 2",
+    "kind": "bench",
+    "current_temperature": "21C",
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "id": "centrifuge_2",
+    "name": "Centrifuge 2",
+    "kind": "centrifuge",
+    "current_temperature": null,
+    "status": "idle",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "id": "microscope_1",
+    "name": "Microscope 1",
+    "kind": "microscope",
+    "current_temperature": null,
+    "status": "idle",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "id": "shelf_a",
+    "name": "Storage Shelf A",
+    "kind": "shelf",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-29T16:47:31+00:00"
+  }
+]

@@ -1,0 +1,32 @@
+flows:
+  validate_calculation:
+    description: >
+      Check a reagent / dilution calculation and explain it, stating the assumptions it relies
+      on. Triggers when the user asks whether a volume, dilution, percent, or concentration is
+      correct, e.g. "I calculated 20 microliters for 0.02 percent in 100 mL, is that right?"
+    steps:
+      - collect: target_percent
+        description: The target percentage, e.g. 0.02 for "0.02 percent".
+      - collect: final_volume_ml
+        description: The final/total volume in mL, e.g. 100.
+      - collect: user_answer_ul
+        description: The volume in microliters the user calculated, e.g. 20.
+      - action: action_validate_lab_calculation
+        next:
+          - if: not slots.labops_available
+            then:
+              - action: utter_labops_unavailable
+                next: wrap_up
+          - if: slots.calc_status = "correct"
+            then:
+              - action: utter_calc_correct
+                next: wrap_up
+          - if: slots.calc_status = "incorrect"
+            then:
+              - action: utter_calc_incorrect
+                next: wrap_up
+          - else:
+              - action: utter_calc_ambiguous
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else

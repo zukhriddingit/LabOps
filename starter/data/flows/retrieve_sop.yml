@@ -1,0 +1,25 @@
+flows:
+  retrieve_sop:
+    description: >
+      Look up the relevant local SOP (standard operating procedure) for equipment setup or a
+      lab procedure, and answer only from that document. Triggers when the user asks which
+      protocol, SOP, or setup applies, e.g. "What centrifuge setup applies for this tissue
+      sample?"
+    steps:
+      - collect: sop_query
+        description: A short description of what the user needs a procedure for, e.g. "centrifuge setup for cardiovascular tissue".
+      - action: action_retrieve_lab_sop
+        next:
+          - if: not slots.labops_available
+            then:
+              - action: utter_labops_unavailable
+                next: wrap_up
+          - if: slots.sop_found
+            then:
+              - action: utter_sop_found
+                next: wrap_up
+          - else:
+              - action: utter_sop_not_found
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else

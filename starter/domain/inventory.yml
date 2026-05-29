@@ -1,0 +1,42 @@
+version: "3.1"
+
+actions:
+  - action_find_inventory
+
+slots:
+  inventory_item:
+    type: text
+    mappings:
+      - type: from_llm
+  # Set by action_find_inventory.
+  inventory_found:
+    type: bool
+    mappings:
+      - type: controlled
+  inventory_location:
+    type: text
+    mappings:
+      - type: controlled
+  inventory_confidence:
+    type: text
+    mappings:
+      - type: controlled
+  inventory_source:
+    type: text
+    mappings:
+      - type: controlled
+  inventory_camera_count:
+    type: float
+    mappings:
+      - type: controlled
+
+responses:
+  utter_ask_inventory_item:
+    - text: "What are you looking for?"
+  utter_inventory_found:
+    - text: >-
+        The inventory record puts {inventory_item} at {inventory_location}. The count is
+        {inventory_source} (confidence {inventory_confidence}), so treat the number as
+        approximate until someone confirms it.
+  utter_inventory_not_found:
+    - text: "I don't have an inventory record for that. Want me to note it for a stock check?"

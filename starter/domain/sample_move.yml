@@ -1,0 +1,50 @@
+version: "3.1"
+
+actions:
+  - action_move_sample
+
+slots:
+  sample_id:
+    type: text
+    mappings:
+      - type: from_llm
+  from_location:
+    type: text
+    mappings:
+      - type: from_llm
+  to_location:
+    type: text
+    mappings:
+      - type: from_llm
+  from_temperature:
+    type: text
+    mappings:
+      - type: from_llm
+  allowed_room_temp_minutes:
+    type: float
+    mappings:
+      - type: from_llm
+  # Set by action_move_sample.
+  room_temp_deadline:
+    type: text
+    mappings:
+      - type: controlled
+  reminder_count:
+    type: float
+    mappings:
+      - type: controlled
+
+responses:
+  utter_ask_sample_id:
+    - text: "Which sample is it? (For example, C17.)"
+  utter_ask_to_location:
+    - text: "Where are you putting it?"
+  utter_ask_from_location:
+    - text: "And where is it coming out of — which freezer?"
+  utter_ask_allowed_room_temp_minutes:
+    - text: "How long can it stay at room temperature, in minutes?"
+  utter_sample_logged:
+    - text: >-
+        Logged — {sample_id} is now on {to_location}. I'll remind you shortly before the
+        room-temperature limit and escalate at the limit. This is user-reported, so flag me if
+        anything's off.

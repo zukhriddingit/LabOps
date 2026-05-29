@@ -1,0 +1,32 @@
+flows:
+  emergency_message:
+    description: >
+      Draft and (after explicit confirmation) send an emergency message to the PI or postdoc,
+      for when the researcher's hands are busy or contaminated. Triggers when the user asks to
+      message, alert, tell, or notify a colleague, e.g. "My gloves are contaminated, message
+      the postdoc that C17 is near the limit."
+    steps:
+      - collect: recipient_role
+        description: 'Who to message: "postdoc" or "PI".'
+      - collect: emergency_message
+        description: The content of the message to send.
+      - action: utter_confirm_emergency_message
+      - collect: message_confirmed
+        description: Whether the user confirms sending the message (yes/no).
+        next:
+          - if: slots.message_confirmed
+            then:
+              - action: action_send_emergency_message
+                next:
+                  - if: slots.labops_available
+                    then:
+                      - action: utter_message_sent
+                        next: wrap_up
+                  - else:
+                      - action: utter_labops_unavailable
+                        next: wrap_up
+          - else:
+              - action: utter_message_cancelled
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else

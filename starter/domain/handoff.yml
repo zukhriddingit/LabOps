@@ -1,0 +1,39 @@
+version: "3.1"
+
+actions:
+  - action_generate_lab_handoff
+  - action_get_lab_state
+
+slots:
+  shift:
+    type: text
+    mappings:
+      - type: from_llm
+  # Set by action_generate_lab_handoff.
+  handoff_summary:
+    type: text
+    mappings:
+      - type: controlled
+  handoff_risks:
+    type: text
+    mappings:
+      - type: controlled
+  handoff_uncertainty:
+    type: text
+    mappings:
+      - type: controlled
+  handoff_move_count:
+    type: float
+    mappings:
+      - type: controlled
+  # Set by action_get_lab_state.
+  open_reminder_count:
+    type: float
+    mappings:
+      - type: controlled
+
+responses:
+  utter_handoff:
+    - text: >-
+        Handoff — Samples: {handoff_summary}. Sample moves this session: {handoff_move_count}.
+        Unresolved: {handoff_risks}. {handoff_uncertainty}

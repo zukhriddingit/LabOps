@@ -1,0 +1,35 @@
+[
+  {
+    "item_name": "15 mL tubes",
+    "location": "Shelf A, bin 3",
+    "bin": "3",
+    "record_count": null,
+    "camera_inferred_count": 2,
+    "stock_level": "ok",
+    "confidence": "medium",
+    "source_type": "camera_inferred",
+    "timestamp": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "item_name": "pipette tips",
+    "location": "Shelf A, bin 1",
+    "bin": "1",
+    "record_count": 1,
+    "camera_inferred_count": null,
+    "stock_level": "low",
+    "confidence": "high",
+    "source_type": "user_reported",
+    "timestamp": "2026-05-29T16:47:31+00:00"
+  },
+  {
+    "item_name": "reagent bottles",
+    "location": "Chemical Cabinet 1",
+    "bin": null,
+    "record_count": 6,
+    "camera_inferred_count": null,
+    "stock_level": "ok",
+    "confidence": "high",
+    "source_type": "user_reported",
+    "timestamp": "2026-05-29T16:47:31+00:00"
+  }
+]

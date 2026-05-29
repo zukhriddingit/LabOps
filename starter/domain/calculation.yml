@@ -1,0 +1,62 @@
+version: "3.1"
+
+actions:
+  - action_validate_lab_calculation
+
+slots:
+  calculation_type:
+    type: text
+    mappings:
+      - type: from_llm
+  target_percent:
+    type: float
+    mappings:
+      - type: from_llm
+  final_volume_ml:
+    type: float
+    mappings:
+      - type: from_llm
+  user_answer_ul:
+    type: float
+    mappings:
+      - type: from_llm
+  # Set by action_validate_lab_calculation.
+  calc_status:
+    type: text
+    mappings:
+      - type: controlled
+  calc_expected_ul:
+    type: float
+    mappings:
+      - type: controlled
+  calc_formula:
+    type: text
+    mappings:
+      - type: controlled
+  calc_assumptions:
+    type: text
+    mappings:
+      - type: controlled
+  calc_warning:
+    type: text
+    mappings:
+      - type: controlled
+
+responses:
+  utter_ask_target_percent:
+    - text: "What's the target percentage?"
+  utter_ask_final_volume_ml:
+    - text: "And the final volume, in mL?"
+  utter_ask_user_answer_ul:
+    - text: "What did you calculate, in microliters?"
+  utter_calc_correct:
+    - text: >-
+        Correct, assuming {calc_assumptions}. {calc_formula}. {calc_warning}
+  utter_calc_incorrect:
+    - text: >-
+        That doesn't match what I calculate. {calc_formula} — I get {calc_expected_ul} µL,
+        assuming {calc_assumptions}. {calc_warning}
+  utter_calc_ambiguous:
+    - text: >-
+        I can't confirm this without more detail. {calc_warning} Is the percent v/v, w/v, or
+        from a stock solution?

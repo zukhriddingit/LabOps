@@ -1,0 +1,22 @@
+version: "3.1"
+
+slots:
+  return_value:
+    type: any
+    mappings:
+      - type: controlled
+  # Set by every custom action; flows branch on it to fall back when the API is down.
+  labops_available:
+    type: bool
+    mappings:
+      - type: controlled
+
+responses:
+  utter_can_do_something_else:
+    - text: "Anything else I can help you with in the lab?"
+  utter_goodbye:
+    - text: "I'll keep watching the bench — call me whenever you need me."
+  utter_labops_unavailable:
+    - text: >-
+        I can't reach the LabOps tool server right now, so I won't log, validate, or send
+        anything until it's back. I can still note the details for you in the meantime.

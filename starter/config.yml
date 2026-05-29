@@ -1,0 +1,23 @@
+# config.yml — Rasa CALM pipeline for LabOps Guardian.
+#
+# CALM uses an LLM "Command Generator" to translate what the user says into structured
+# commands (start a flow, fill a slot, correct a value, cancel, ...). The FlowPolicy then
+# executes your flows. Docs: https://rasa.com/docs/
+
+recipe: default.v1
+language: en
+
+assistant_id: labops_guardian_2026
+
+pipeline:
+  - name: CompactLLMCommandGenerator
+    llm:
+      # References a model_group defined in endpoints.yml (Nebius Token Factory).
+      model_group: nebius_command_llm
+    flow_retrieval:
+      # Off for the starter: a handful of flows fit in the prompt. Turn on + add an
+      # embeddings model_group once you have many flows.
+      active: false
+
+policies:
+  - name: FlowPolicy

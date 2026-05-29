@@ -1,0 +1,43 @@
+version: "3.1"
+
+actions:
+  - action_retrieve_lab_sop
+
+slots:
+  sop_query:
+    type: text
+    mappings:
+      - type: from_llm
+  # Set by action_retrieve_lab_sop.
+  sop_found:
+    type: bool
+    mappings:
+      - type: controlled
+  sop_title:
+    type: text
+    mappings:
+      - type: controlled
+  sop_checklist:
+    type: text
+    mappings:
+      - type: controlled
+  sop_missing:
+    type: text
+    mappings:
+      - type: controlled
+  sop_caution:
+    type: text
+    mappings:
+      - type: controlled
+
+responses:
+  utter_ask_sop_query:
+    - text: "What procedure do you need — what are you setting up?"
+  utter_sop_found:
+    - text: >-
+        Based on the local SOP, the matching procedure is {sop_title}. Checklist: {sop_checklist}.
+        {sop_caution}
+  utter_sop_not_found:
+    - text: >-
+        I don't have a matching local SOP for that, and I won't guess at protocol steps. Can you
+        tell me the sample type or protocol version so I can search again?

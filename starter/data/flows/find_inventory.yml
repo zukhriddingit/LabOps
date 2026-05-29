@@ -1,0 +1,24 @@
+flows:
+  find_inventory:
+    description: >
+      Find where a lab consumable or reagent is stored and report the location with its
+      confidence level. Triggers when the user asks where an item is, e.g. "Where are the
+      15 mL tubes?"
+    steps:
+      - collect: inventory_item
+        description: The item the user is looking for, e.g. "15 mL tubes".
+      - action: action_find_inventory
+        next:
+          - if: not slots.labops_available
+            then:
+              - action: utter_labops_unavailable
+                next: wrap_up
+          - if: slots.inventory_found
+            then:
+              - action: utter_inventory_found
+                next: wrap_up
+          - else:
+              - action: utter_inventory_not_found
+                next: wrap_up
+      - id: wrap_up
+        action: utter_can_do_something_else
