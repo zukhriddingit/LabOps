@@ -402,3 +402,98 @@ class ActionCreateLabReminder(Action):
             return []
         dispatcher.utter_message(text=display(result, "response", "message") or f"Reminder created as user-reported for {duration} minutes from now.")
         return [SlotSet("duration_minutes", duration), SlotSet("sample_id", sample_id)]
+
+
+class ActionRecallHistory(Action):
+    def name(self) -> Text:
+        return "action_recall_history"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        equipment_id = value(tracker, "equipment_id") or value(tracker, "equipment_name")
+        issue_type = value(tracker, "issue_type")
+        if not equipment_id:
+            dispatcher.utter_message(text="Which piece of equipment should I check history for?")
+            return []
+
+        result = client.recall_history({"equipment_id": equipment_id, "issue_type": issue_type})
+        if backend_error(dispatcher, result):
+            return []
+
+        if not result.get("found"):
+            dispatcher.utter_message(text=f"No prior incidents found for {equipment_id}.")
+            return []
+
+        events = result.get("related_events", [])
+        parts = []
+        for e in events[:2]:
+            parts.append(e.get("summary", ""))
+            if e.get("recorded_cause"):
+                parts.append(f"Recorded cause: {e['recorded_cause']}.")
+            if e.get("resolution"):
+                parts.append(f"Resolution: {e['resolution']}.")
+
+        note = result.get("uncertainty_note", "")
+        dispatcher.utter_message(text=" ".join(parts) + (f" Note: {note}" if note else ""))
+        return [SlotSet("equipment_id", equipment_id), SlotSet("issue_type", issue_type)]
+
+
+class ActionCreateMaintenanceTicket(Action):
+    def name(self) -> Text:
+        return "action_create_maintenance_ticket"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        incident_id = value(tracker, "incident_id")
+        if not incident_id:
+            # Try to find the latest open incident
+            incidents = client.get_incidents()
+            if isinstance(incidents, list):
+                open_inc = [i for i in incidents if i.get("status") == "open"]
+                if open_inc:
+                    incident_id = open_inc[-1]["incident_id"]
+            if not incident_id:
+                dispatcher.utter_message(text="I need an incident ID to create a maintenance ticket. Is there an open incident?")
+                return []
+
+        equipment_id = value(tracker, "equipment_id") or "unknown equipment"
+        payload = {
+            "incident_id": incident_id,
+            "summary": f"Maintenance required for {equipment_id}: {incident_id}",
+            "severity": "high",
+            "assigned_to": "Facilities",
+        }
+        result = client.create_ticket(payload)
+        if backend_error(dispatcher, result):
+            return []
+
+        ticket_id = result.get("ticket_id", "unknown")
+        dispatcher.utter_message(
+            text=f"Maintenance ticket {ticket_id} created and assigned to Facilities for incident {incident_id}."
+        )
+        return [SlotSet("incident_id", incident_id)]
+
+
+class ActionGetOpenIncidents(Action):
+    def name(self) -> Text:
+        return "action_get_open_incidents"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        result = client.get_incidents()
+        if isinstance(result, dict) and not result.get("ok", True):
+            backend_error(dispatcher, result)
+            return []
+
+        incidents = result if isinstance(result, list) else result.get("data", [])
+        open_incidents = [i for i in incidents if i.get("status") == "open"]
+
+        if not open_incidents:
+            dispatcher.utter_message(text="No open incidents right now.")
+            return []
+
+        parts = []
+        for inc in open_incidents[:3]:
+            parts.append(
+                f"{inc['incident_id']}: {inc['type'].replace('_', ' ')} on {inc['equipment_id']} "
+                f"(severity: {inc['severity']}, current: {inc.get('current_value', 'unknown')})"
+            )
+        dispatcher.utter_message(text="Open incidents: " + "; ".join(parts) + ".")
+        return []

@@ -25,6 +25,7 @@ COLLECTIONS = [
     "events",
     "messages",
     "experiment_runs",
+    "activity_events",
 ]
 
 

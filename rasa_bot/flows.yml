@@ -60,3 +60,18 @@ flows:
     description: Create a lab reminder through the backend tool server.
     steps:
       - action: action_create_lab_reminder
+
+  recall_history:
+    description: Recall prior incidents for a piece of equipment, with uncertainty note that past cause does not confirm current cause.
+    steps:
+      - action: action_recall_history
+
+  get_open_incidents:
+    description: List all currently open incidents in the lab.
+    steps:
+      - action: action_get_open_incidents
+
+  create_maintenance_ticket:
+    description: Create a maintenance ticket for an open incident and assign it to Facilities.
+    steps:
+      - action: action_create_maintenance_ticket

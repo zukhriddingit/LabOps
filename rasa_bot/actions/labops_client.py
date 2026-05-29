@@ -91,3 +91,17 @@ class LabOpsClient:
 
     def create_reminder(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         return self._request("POST", "/api/tools/create_reminder", payload)
+
+    # ── Incident / memory / ticket (LabOps Guardian v0.2) ────────────────────
+
+    def get_incidents(self) -> Dict[str, Any]:
+        return self._request("GET", "/api/incidents")
+
+    def recall_history(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self._request("POST", "/api/tools/recall_history", payload)
+
+    def create_ticket(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self._request("POST", "/api/tools/create_ticket", payload)
+
+    def get_equipment(self) -> Dict[str, Any]:
+        return self._request("GET", "/api/equipment")

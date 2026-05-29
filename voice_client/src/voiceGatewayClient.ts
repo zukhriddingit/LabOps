@@ -10,7 +10,10 @@ export async function transcribeWithSpeechmatics(blob: Blob): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Voice gateway transcription returned HTTP ${response.status}`);
+    const body = await response.json().catch(() => ({}));
+    const detail = body.detail ?? `HTTP ${response.status}`;
+    console.error("[LabOps] Speechmatics backend error:", detail);
+    throw new Error(detail);
   }
 
   const data = await response.json();

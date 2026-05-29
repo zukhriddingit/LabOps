@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node / frontend (not needed in the backend image)
+web_demo/node_modules/
+web_demo/dist/
+
+# Git & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Rasa (not part of the backend image)
+starter/

@@ -1,0 +1,26 @@
+services:
+
+  # ── LabOps Backend API (port 8000) ─────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: labops_api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Bind-mount: hot-reload on code changes + JSON data persists on host
+      - ./labops_api:/app/labops_api
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # ── Voice Gateway: Speechmatics ASR + Rime TTS (port 8010) ────────────────
+  voice_gateway:
+    build:
+      context: ./voice_gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8010"
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1

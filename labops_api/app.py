@@ -10,10 +10,13 @@ Run:
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from labops_api import storage, tools
 from labops_api.models import (
@@ -24,6 +27,7 @@ from labops_api.models import (
     EventRequest,
     FindInventoryRequest,
     GenerateHandoffRequest,
+    LogActivityEventRequest,
     MoveSampleRequest,
     RecallHistoryRequest,
     RetrieveSopRequest,
@@ -387,15 +391,72 @@ def find_inventory(req: FindInventoryRequest) -> dict:
 
 @app.post("/api/tools/create_reminder")
 def create_reminder(req: CreateReminderRequest) -> dict:
+    # Accept both explicit {label, due_at} and Rasa's {duration_minutes, message} form
+    if req.due_at:
+        due_at = req.due_at
+    elif req.duration_minutes:
+        due_at = (datetime.now(timezone.utc) + timedelta(minutes=req.duration_minutes)).isoformat(timespec="seconds")
+    else:
+        raise HTTPException(status_code=422, detail="Provide either due_at or duration_minutes.")
+
+    label = req.label or req.message or f"Lab reminder in {req.duration_minutes} min"
+
     reminders = storage.load("reminders")
     reminder = {
-        "id": next_id("rem", reminders), "kind": "manual", "label": req.label,
-        "due_at": req.due_at, "sample_id": req.sample_id, "status": "open",
+        "id": next_id("rem", reminders), "kind": "manual", "label": label,
+        "due_at": due_at, "sample_id": req.sample_id, "status": "open",
         "created_at": now_iso(),
     }
     reminders.append(reminder)
     storage.save("reminders", reminders)
     return reminder
+
+
+# ── Activity events ───────────────────────────────────────────────────────────
+
+@app.post("/api/activity-events")
+def log_activity_event(req: LogActivityEventRequest) -> dict:
+    activity_events = storage.load("activity_events")
+    today = now_iso()[:10]  # YYYY-MM-DD
+    event = {
+        "id": next_id("act", activity_events),
+        "person_name": req.person_name,
+        "event_type": req.event_type,
+        "sample_id": req.sample_id,
+        "description": req.description or f"{req.person_name} performed {req.event_type}",
+        "source_type": req.source_type,
+        "confidence": req.confidence,
+        "date": today,
+        "timestamp": now_iso(),
+    }
+    activity_events.append(event)
+    storage.save("activity_events", activity_events)
+    return event
+
+
+@app.get("/api/activity-events/today")
+def get_today_activity() -> list[dict]:
+    today = now_iso()[:10]
+    return [e for e in storage.load("activity_events") if e.get("date") == today]
+
+
+@app.get("/api/people/{person_name}/daily-activity")
+def get_person_daily_activity(person_name: str) -> dict:
+    today = now_iso()[:10]
+    all_events = storage.load("activity_events")
+    person_events = [
+        e for e in all_events
+        if e.get("person_name", "").lower() == person_name.lower()
+        and e.get("date") == today
+    ]
+    return {
+        "person_name": person_name,
+        "date": today,
+        "activities": person_events,
+        "count": len(person_events),
+        "source_type": "user_reported",
+        "confidence": "medium",
+    }
 
 
 @app.post("/api/tools/send_emergency_message")
@@ -412,3 +473,26 @@ def send_emergency_message(req: SendEmergencyMessageRequest) -> dict:
     messages.append(message)
     storage.save("messages", messages)
     return message
+
+
+# ── Voice chat endpoint (Rasa-compatible format, powered by Qwen via Nebius) ──
+# VITE_RASA_REST_URL=http://localhost:8001/api/chat in voice_client/.env.local
+
+from labops_api import agent as _agent
+
+class ChatRequest(BaseModel):
+    message: str
+    sender: str = "user"
+
+
+def _chat_response(text: str) -> list[dict[str, Any]]:
+    return [{"recipient_id": "user", "text": text}]
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest) -> list[dict[str, Any]]:
+    """Keyword-routes voice/text input to the right backend tool and returns a spoken reply."""
+    t = req.message.lower().strip()
+
+    reply = await _agent.run(req.message)
+    return _chat_response(reply)

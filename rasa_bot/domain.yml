@@ -13,6 +13,9 @@ intents:
   - log_daily_activity
   - get_person_daily_activity
   - create_reminder
+  - recall_history
+  - get_open_incidents
+  - create_maintenance_ticket
   - greet
   - goodbye
   - fallback
@@ -27,6 +30,9 @@ entities:
   - duration_minutes
   - item_name
   - equipment_name
+  - equipment_id
+  - issue_type
+  - incident_id
   - sop_query
   - calculation_type
   - target_percent
@@ -80,6 +86,23 @@ slots:
     mappings:
       - type: from_entity
         entity: equipment_name
+  equipment_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: equipment_id
+  issue_type:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: issue_type
+  incident_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: incident_id
   sop_query:
     type: text
     mappings:
@@ -133,11 +156,11 @@ slots:
 
 responses:
   utter_greet:
-    - text: "LabOps Guardian online. I can track samples, check calculations, retrieve SOP-grounded guidance, find inventory, and draft confirmed messages."
+    - text: "LabOps Guardian online. I can track samples, check calculations, retrieve SOP-grounded guidance, find inventory, check open incidents, recall equipment history, and draft confirmed messages."
   utter_goodbye:
     - text: "Standing by. I will keep using the database for current lab state and local knowledge for SOP answers."
   utter_fallback:
-    - text: "I did not catch that clearly. Please rephrase, or give me the sample, item, SOP, calculation, reminder, or handoff details."
+    - text: "I did not catch that clearly. Please rephrase, or give me the sample, item, SOP, calculation, reminder, incident, or handoff details."
 
 actions:
   - action_move_sample
@@ -152,6 +175,9 @@ actions:
   - action_log_daily_activity
   - action_get_person_daily_activity
   - action_create_lab_reminder
+  - action_recall_history
+  - action_get_open_incidents
+  - action_create_maintenance_ticket
 
 session_config:
   session_expiration_time: 60

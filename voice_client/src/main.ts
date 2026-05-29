@@ -85,7 +85,10 @@ const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
 async function startSpeechmaticsRecording() {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   chunks = [];
-  mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+  // Pick the best supported audio format — Safari needs mp4, Firefox prefers ogg
+  const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"]
+    .find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+  mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
   mediaRecorder.addEventListener("dataavailable", (event) => {
     if (event.data.size) chunks.push(event.data);
   });
@@ -93,11 +96,13 @@ async function startSpeechmaticsRecording() {
     stream.getTracks().forEach((track) => track.stop());
     status.textContent = "Sending audio to Speechmatics...";
     try {
-      const transcript = await transcribeWithSpeechmatics(new Blob(chunks, { type: "audio/webm" }));
+      const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+      const transcript = await transcribeWithSpeechmatics(blob);
       await submit(transcript);
-    } catch {
+    } catch (err) {
+      console.error("[LabOps] Speechmatics error:", err);
       status.textContent = "Speechmatics path failed. Typed input is ready.";
-      addMessage("guardian", "Speechmatics is not reachable or not configured. Typed input is still ready.");
+      addMessage("guardian", `Voice failed: ${err instanceof Error ? err.message : String(err)}. Typed input still works.`);
     }
   });
   mediaRecorder.start();

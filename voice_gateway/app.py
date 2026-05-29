@@ -6,21 +6,39 @@ import os
 from typing import Any, Dict
 
 import httpx
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+]
 
 app = FastAPI(title="LabOps Guardian Voice Gateway")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Ensure CORS headers appear on error responses too (Safari requires this)
+@app.exception_handler(Exception)
+async def _cors_safe_error(request: Request, exc: Exception) -> JSONResponse:
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if origin in ALLOWED_ORIGINS:
+        headers["Access-Control-Allow-Origin"] = origin
+    status = exc.status_code if isinstance(exc, HTTPException) else 500
+    detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+    return JSONResponse(status_code=status, content={"detail": detail}, headers=headers)
 
 
 class TTSRequest(BaseModel):
@@ -45,50 +63,72 @@ async def transcribe(audio: UploadFile = File(...)) -> Dict[str, Any]:
     api_key = env("SPEECHMATICS_API_KEY")
     base_url = env("SPEECHMATICS_BASE_URL", "https://asr.api.speechmatics.com/v2").rstrip("/")
     language = env("SPEECHMATICS_LANGUAGE", "en")
+
     if not api_key:
-        raise HTTPException(status_code=503, detail="Speechmatics is not configured. Set SPEECHMATICS_API_KEY.")
+        raise HTTPException(status_code=503, detail="Speechmatics not configured.")
+
+    audio_bytes = await audio.read()
+    content_type = audio.content_type or "audio/webm"
+    filename = audio.filename or f"audio.{content_type.split('/')[-1].split(';')[0]}"
+    print(f"[transcribe] received {len(audio_bytes)} bytes, content-type={content_type}, filename={filename}")
 
     config = {
         "type": "transcription",
-        "transcription_config": {
-            "language": language,
-            "operating_point": "enhanced",
-        },
+        "transcription_config": {"language": language, "operating_point": "enhanced"},
     }
     files = {
         "config": (None, json.dumps(config), "application/json"),
-        "data_file": (audio.filename or "speech.webm", await audio.read(), audio.content_type or "audio/webm"),
+        "data_file": (filename, audio_bytes, content_type),
     }
     headers = {"Authorization": f"Bearer {api_key}"}
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        create = await client.post(f"{base_url}/jobs", headers=headers, files=files)
-        create.raise_for_status()
-        job_id = create.json().get("id")
-        if not job_id:
-            raise HTTPException(status_code=502, detail="Speechmatics did not return a job id.")
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            create = await client.post(f"{base_url}/jobs", headers=headers, files=files)
+            if not create.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Speechmatics job creation failed: {create.status_code} — {create.text[:200]}",
+                )
 
-        for _ in range(60):
-            status = await client.get(f"{base_url}/jobs/{job_id}", headers=headers)
-            status.raise_for_status()
-            job = status.json().get("job", status.json())
-            if job.get("status") == "done":
-                transcript = await client.get(f"{base_url}/jobs/{job_id}/transcript?format=txt", headers=headers)
-                transcript.raise_for_status()
-                return {"text": transcript.text.strip(), "provider": "speechmatics", "job_id": job_id}
-            if job.get("status") in {"rejected", "deleted", "expired"}:
-                raise HTTPException(status_code=502, detail=f"Speechmatics job ended with status {job.get('status')}.")
-            await asyncio.sleep(1)
+            job_id = create.json().get("id")
+            if not job_id:
+                raise HTTPException(status_code=502, detail="Speechmatics did not return a job id.")
 
-    raise HTTPException(status_code=504, detail="Speechmatics transcription timed out.")
+            for _ in range(60):
+                poll = await client.get(f"{base_url}/jobs/{job_id}", headers=headers)
+                if not poll.is_success:
+                    raise HTTPException(status_code=502, detail=f"Speechmatics poll failed: {poll.status_code}")
+                job = poll.json().get("job", poll.json())
+                if job.get("status") == "done":
+                    result = await client.get(
+                        f"{base_url}/jobs/{job_id}/transcript?format=txt", headers=headers
+                    )
+                    return {"text": result.text.strip(), "provider": "speechmatics", "job_id": job_id}
+                if job.get("status") in {"rejected", "deleted", "expired"}:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Speechmatics job {job_id} ended with status: {job.get('status')}",
+                    )
+                await asyncio.sleep(1)
+
+        raise HTTPException(status_code=504, detail="Speechmatics transcription timed out after 60s.")
+
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Speechmatics request timed out.")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot reach Speechmatics: {exc}")
 
 
 @app.post("/api/tts")
 async def tts(request: TTSRequest) -> Response:
     api_key = env("RIME_API_KEY")
     api_url = env("RIME_API_URL", "https://users.rime.ai/v1/rime-tts")
+
     if not api_key:
-        raise HTTPException(status_code=503, detail="Rime is not configured. Set RIME_API_KEY.")
+        raise HTTPException(status_code=503, detail="Rime not configured.")
 
     payload = {
         "text": request.text,
@@ -104,7 +144,19 @@ async def tts(request: TTSRequest) -> Response:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(api_url, headers=headers, json=payload)
-        response.raise_for_status()
-        return Response(content=response.content, media_type=response.headers.get("content-type", "audio/mpeg"))
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(api_url, headers=headers, json=payload)
+            if not response.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Rime TTS failed: {response.status_code} — {response.text[:200]}",
+                )
+            return Response(
+                content=response.content,
+                media_type=response.headers.get("content-type", "audio/mpeg"),
+            )
+    except HTTPException:
+        raise
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot reach Rime: {exc}")

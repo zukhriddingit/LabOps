@@ -208,9 +208,21 @@ class FindInventoryRequest(BaseModel):
 
 
 class CreateReminderRequest(BaseModel):
-    label: str
-    due_at: str
+    # Either the explicit label+due_at form, or the Rasa duration_minutes+message form
+    label: Optional[str] = None
+    due_at: Optional[str] = None
     sample_id: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    message: Optional[str] = None
+
+
+class LogActivityEventRequest(BaseModel):
+    person_name: str
+    event_type: str = "lab_activity"
+    sample_id: Optional[str] = None
+    description: Optional[str] = None
+    source_type: SourceType = "user_reported"
+    confidence: Confidence = "medium"
 
 
 class SendEmergencyMessageRequest(BaseModel):
