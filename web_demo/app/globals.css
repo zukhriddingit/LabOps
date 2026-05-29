@@ -1,0 +1,264 @@
+:root {
+  --bg: #070b16;
+  --panel: #0f1626;
+  --panel-2: #141d31;
+  --line: #1e2942;
+  --text: #dce6ff;
+  --dim: #8094bd;
+  --ok: #36d1a6;
+  --info: #4aa8ff;
+  --warn: #ffb020;
+  --crit: #ff3b5c;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.logo {
+  font-weight: 700;
+  font-size: 18px;
+}
+.subtitle {
+  color: var(--dim);
+  font-size: 13px;
+  flex: 1;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.scene {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.panels {
+  width: 360px;
+  padding: 14px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* shared Panel */
+.panel {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.row .val {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* badges */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 12px;
+  background: var(--line);
+  color: var(--dim);
+  white-space: nowrap;
+}
+.badge.ok {
+  background: rgba(54, 209, 166, 0.15);
+  color: var(--ok);
+}
+.badge.info {
+  background: rgba(74, 168, 255, 0.15);
+  color: var(--info);
+}
+.badge.warn {
+  background: rgba(255, 176, 32, 0.15);
+  color: var(--warn);
+}
+.badge.crit {
+  background: rgba(255, 59, 92, 0.15);
+  color: var(--crit);
+}
+
+.banner {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.banner.warn {
+  background: rgba(255, 176, 32, 0.15);
+  color: var(--warn);
+}
+.banner.crit {
+  background: rgba(255, 59, 92, 0.15);
+  color: var(--crit);
+}
+
+/* inventory */
+.inv-name {
+  font-weight: 600;
+}
+.inv-loc {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 2px 0 8px;
+}
+.inv-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.inv-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--warn);
+}
+
+/* controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btn {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+.btn:hover {
+  border-color: var(--ok);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn.primary {
+  background: var(--ok);
+  color: #03110c;
+  font-weight: 700;
+  border-color: var(--ok);
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--dim);
+}
+.btn.small {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+/* message panel */
+.msg-draft {
+  font-size: 13px;
+  background: rgba(74, 168, 255, 0.08);
+  border: 1px solid rgba(74, 168, 255, 0.25);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  color: var(--text);
+}
+
+/* transcript */
+.transcript {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  padding: 10px 18px;
+  max-height: 26vh;
+  overflow-y: auto;
+}
+.transcript-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.transcript-head h3 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+.transcript-head .btn {
+  margin-left: 6px;
+}
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.line {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+}
+.line .speaker {
+  flex: 0 0 110px;
+  color: var(--dim);
+  font-size: 12px;
+}
+.line.agent .text {
+  color: var(--ok);
+}
+.line.human .text {
+  color: var(--text);
+}
+
+.conn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
