@@ -22,6 +22,16 @@ Backend assumed at `http://localhost:8000` (override `NEXT_PUBLIC_LABOPS_API_URL
 backend is down**, the header shows *disconnected (mock)* and the demo stays fully usable on
 deterministic mock data.
 
+## UI (MedSim-inspired)
+
+- **Full-bleed 3D scene** — grid floor, fog, contact shadows, rounded low-poly equipment.
+- **Floating pins** on every object (MedSim-style code chip + pulsing dot). Click a pin → a
+  contextual **info card** with details and quick actions (Move C17, Find tubes, Draft message).
+  C17's pin tracks its live status colour and pulses on warning/critical.
+- **Bottom HUD bar** — live stats (room-temp timer, C17 status, alerts, inventory, backend) and
+  an **OPEN DASHBOARD** button. The full dashboard is hidden by default and slides in on demand.
+- **Dashboard** (slide-in) — Status, Demo Controls, Inventory, PI/Postdoc message, Transcript.
+
 ## Structure
 
 ```

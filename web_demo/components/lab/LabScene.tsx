@@ -1,77 +1,122 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text } from "@react-three/drei";
+import { OrbitControls, Grid, ContactShadows } from "@react-three/drei";
 import Equipment from "./Equipment";
 import SampleC17 from "./SampleC17";
+import Pin from "./Pin";
 import { useLabStore } from "@/store/labStore";
+import { LAB_OBJECTS, SAMPLE_LOCATION_POS, type Tone, type Vec3 } from "@/lib/labObjects";
+import type { SampleStatus } from "@/types/lab";
 
-function Room() {
-  return (
-    <group>
-      {/* floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[26, 20]} />
-        <meshStandardMaterial color="#11182b" />
-      </mesh>
-      {/* back wall */}
-      <mesh position={[0, 3, -5]} receiveShadow>
-        <planeGeometry args={[26, 8]} />
-        <meshStandardMaterial color="#0c1322" />
-      </mesh>
-      {/* side wall */}
-      <mesh position={[-9, 3, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[20, 8]} />
-        <meshStandardMaterial color="#0c1322" />
-      </mesh>
-    </group>
-  );
-}
+const STATUS_TONE: Record<SampleStatus, Tone> = {
+  stored: "info",
+  tracking: "ok",
+  stabilized: "ok",
+  warning: "warn",
+  critical: "crit",
+};
 
 export default function LabScene() {
   const highlighted = useLabStore((s) => s.highlighted);
+  const selectedPinId = useLabStore((s) => s.selectedPinId);
+  const setSelectedPin = useLabStore((s) => s.setSelectedPin);
+  const sample = useLabStore((s) => s.sample);
+
+  const samplePos = SAMPLE_LOCATION_POS[sample.location];
+  const samplePinPos: Vec3 = [samplePos[0], samplePos[1] + 1.35, samplePos[2]];
 
   return (
-    <Canvas camera={{ position: [7, 6, 9], fov: 50 }} shadows>
-      <color attach="background" args={["#0a0e1a"]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[6, 9, 5]} intensity={1.15} castShadow />
-      <pointLight position={[-5, 4, 3]} intensity={0.4} color="#4aa8ff" />
+    <Canvas
+      camera={{ position: [10, 8.5, 14], fov: 46 }}
+      shadows
+      dpr={[1, 2]}
+      onPointerMissed={() => setSelectedPin(null)}
+    >
+      <color attach="background" args={["#070b16"]} />
+      <fog attach="fog" args={["#070b16", 14, 38]} />
 
-      <Room />
+      <ambientLight intensity={0.45} />
+      <hemisphereLight args={["#9fc0ff", "#0a0e1a", 0.5]} />
+      <directionalLight
+        position={[7, 11, 6]}
+        intensity={1.25}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-14}
+        shadow-camera-right={14}
+        shadow-camera-top={14}
+        shadow-camera-bottom={-14}
+      />
+      <pointLight position={[-6, 4, 4]} intensity={0.5} color="#4aa8ff" />
+      <pointLight position={[6, 3, -3]} intensity={0.35} color="#36d1a6" />
 
-      {/* 1. Freezer B */}
-      <Equipment position={[-4.5, 1.5, -1]} size={[1.6, 3, 1.6]} color="#1b3a6b" emissive="#0d6efd" label="Freezer B  -60°C" />
-      {/* 2. Backup Freezer D */}
-      <Equipment position={[-4.5, 1.5, 2.5]} size={[1.6, 3, 1.6]} color="#1b3a5b" emissive="#0d6efd" label="Backup Freezer D" />
-      {/* 3. Bench 2 */}
-      <Equipment position={[2.5, 0.5, 1]} size={[3.6, 1, 2]} color="#2a2f45" label="Bench 2" />
-      {/* 5. Inventory Shelf A (highlighted on Find tubes) */}
-      <Equipment position={[-1, 1, 4]} size={[2, 2, 0.6]} color="#243049" label="Shelf A" highlighted={highlighted === "shelf_a"} />
-      {/* 6. Chemical Cabinet 1 */}
-      <Equipment position={[1.5, 1, 4]} size={[1.4, 2, 0.6]} color="#2c3a2a" label="Chem Cabinet 1" />
-      {/* 7. Centrifuge 2 */}
-      <Equipment position={[5.5, 0.6, -2]} size={[1, 1.2, 1]} color="#3a4668" label="Centrifuge 2" />
-      {/* 8. Microscope 1 */}
-      <Equipment position={[4.5, 0.6, 3]} size={[0.8, 1.2, 0.8]} color="#46406b" label="Microscope 1" />
-      {/* 10. PI / Postdoc message station */}
-      <Equipment position={[7, 0.9, 0]} size={[1, 1.8, 0.4]} color="#5a2a4a" label="PI / Postdoc" />
+      {/* floor */}
+      <Grid
+        position={[0, 0.01, 0]}
+        args={[60, 60]}
+        cellSize={1}
+        cellThickness={0.6}
+        cellColor="#16203a"
+        sectionSize={5}
+        sectionThickness={1.1}
+        sectionColor="#27406e"
+        fadeDistance={42}
+        fadeStrength={1.2}
+        infiniteGrid
+        followCamera={false}
+      />
+      <ContactShadows position={[0, 0.02, 0]} opacity={0.55} scale={46} blur={2.4} far={8} color="#000814" />
 
-      {/* 9. Simulated camera / shelf sensor node */}
-      <group position={[-1, 4.2, 4]}>
-        <mesh>
-          <sphereGeometry args={[0.18, 16, 16]} />
-          <meshStandardMaterial color="#9aa7c7" emissive="#5cf" emissiveIntensity={0.6} />
-        </mesh>
-        <Text position={[0, 0.4, 0]} fontSize={0.22} color="#7cf" anchorX="center">
-          Sim camera (no CV)
-        </Text>
-      </group>
+      {/* equipment + pins */}
+      {LAB_OBJECTS.map((o) => {
+        const pinY = o.position[1] + o.size[1] / 2 + (o.shape === "sphere" ? 0.5 : 0.6);
+        const pinPos: Vec3 = [o.position[0], pinY, o.position[2]];
+        return (
+          <group key={o.id}>
+            {o.shape === "sphere" ? (
+              <mesh position={o.position}>
+                <sphereGeometry args={[o.size[0], 20, 20]} />
+                <meshStandardMaterial color={o.color} emissive={o.emissive ?? "#000"} emissiveIntensity={0.6} />
+              </mesh>
+            ) : (
+              <Equipment
+                position={o.position}
+                size={o.size}
+                color={o.color}
+                emissive={o.emissive}
+                highlighted={o.id === "shelf_a" && highlighted === "shelf_a"}
+              />
+            )}
+            <Pin
+              position={pinPos}
+              code={o.code}
+              tone={o.tone}
+              active={selectedPinId === o.id}
+              onClick={() => setSelectedPin(o.id)}
+            />
+          </group>
+        );
+      })}
 
-      {/* 4. Sample C17 */}
+      {/* Sample C17 + its live pin */}
       <SampleC17 />
+      <Pin
+        position={samplePinPos}
+        code={sample.id}
+        tone={STATUS_TONE[sample.status]}
+        active={selectedPinId === "sample"}
+        pulse={sample.status === "warning" || sample.status === "critical"}
+        onClick={() => setSelectedPin("sample")}
+      />
 
-      <OrbitControls enablePan={false} minDistance={6} maxDistance={18} />
+      <OrbitControls
+        enablePan={false}
+        target={[1, 1, 0.5]}
+        minDistance={8}
+        maxDistance={26}
+        maxPolarAngle={Math.PI / 2.1}
+      />
     </Canvas>
   );
 }

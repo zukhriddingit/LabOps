@@ -6,12 +6,13 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { useLabStore } from "@/store/labStore";
 import { DEMO } from "@/lib/mockData";
+import { SAMPLE_LOCATION_POS } from "@/lib/labObjects";
 import type { SampleLocation, SampleStatus } from "@/types/lab";
 
 const LOCATION_POS: Record<SampleLocation, THREE.Vector3> = {
-  "Freezer B": new THREE.Vector3(-4.5, 1.4, -1),
-  "Bench 2": new THREE.Vector3(2.5, 1.2, 1),
-  "Backup Freezer D": new THREE.Vector3(-4.5, 1.4, 2.5),
+  "Freezer B": new THREE.Vector3(...SAMPLE_LOCATION_POS["Freezer B"]),
+  "Bench 2": new THREE.Vector3(...SAMPLE_LOCATION_POS["Bench 2"]),
+  "Backup Freezer D": new THREE.Vector3(...SAMPLE_LOCATION_POS["Backup Freezer D"]),
 };
 
 const STATUS_COLOR: Record<SampleStatus, string> = {

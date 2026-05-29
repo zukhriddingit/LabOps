@@ -41,6 +41,12 @@ interface LabState {
   transcript: TranscriptLine[];
   transcriptShown: number;
 
+  // UI
+  selectedPinId: string | null;
+  dashboardOpen: boolean;
+  setSelectedPin: (id: string | null) => void;
+  toggleDashboard: (force?: boolean) => void;
+
   // lifecycle
   pollState: () => Promise<void>;
   tick: () => void;
@@ -65,6 +71,12 @@ export const useLabStore = create<LabState>((set, get) => ({
   messageDraft: null,
   transcript: TRANSCRIPT,
   transcriptShown: 2,
+
+  selectedPinId: null,
+  dashboardOpen: false,
+  setSelectedPin: (id) => set({ selectedPinId: id }),
+  toggleDashboard: (force) =>
+    set((s) => ({ dashboardOpen: force ?? !s.dashboardOpen })),
 
   pollState: async () => {
     try {
@@ -195,5 +207,6 @@ export const useLabStore = create<LabState>((set, get) => ({
       messageStatus: "none",
       messageDraft: null,
       transcriptShown: 2,
+      selectedPinId: null,
     }),
 }));

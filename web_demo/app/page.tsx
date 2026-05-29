@@ -2,17 +2,15 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import StatusPanel from "@/components/lab/StatusPanel";
-import InventoryPanel from "@/components/lab/InventoryPanel";
-import MessagePanel from "@/components/lab/MessagePanel";
-import DemoControls from "@/components/lab/DemoControls";
-import TranscriptPanel from "@/components/lab/TranscriptPanel";
+import HudBar from "@/components/lab/HudBar";
+import Dashboard from "@/components/lab/Dashboard";
+import InfoCard from "@/components/lab/InfoCard";
 import { useLabStore } from "@/store/labStore";
 
 // The R3F Canvas can't server-render — load it client-only.
 const LabScene = dynamic(() => import("@/components/lab/LabScene"), {
   ssr: false,
-  loading: () => <div style={{ padding: 24, color: "#8094bd" }}>Loading lab…</div>,
+  loading: () => <div className="scene-loading">Loading lab…</div>,
 });
 
 export default function Page() {
@@ -33,25 +31,20 @@ export default function Page() {
   }, [tick]);
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <span className="logo">🧪 LabOps Guardian</span>
-        <span className="subtitle">protocol-aware lab coworker · 3D command center</span>
-      </header>
+    <div className="stage">
+      <div className="scene-full">
+        <LabScene />
+      </div>
 
-      <main className="layout">
-        <section className="scene">
-          <LabScene />
-        </section>
-        <aside className="panels">
-          <StatusPanel />
-          <InventoryPanel />
-          <MessagePanel />
-          <DemoControls />
-        </aside>
-      </main>
+      <div className="brand-overlay">
+        <span className="brand-name">🧪 LabOps Guardian</span>
+        <span className="brand-tag">CARDIOVASCULAR LAB · BENCH 2 · LIVE</span>
+        <span className="brand-hint">Click a pin for details · drag to orbit</span>
+      </div>
 
-      <TranscriptPanel />
+      <InfoCard />
+      <Dashboard />
+      <HudBar />
     </div>
   );
 }

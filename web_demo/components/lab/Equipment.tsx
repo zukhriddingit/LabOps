@@ -1,53 +1,39 @@
 "use client";
 
-import { Text } from "@react-three/drei";
-
-type Vec3 = [number, number, number];
+import { RoundedBox } from "@react-three/drei";
+import type { Vec3 } from "@/lib/labObjects";
 
 export default function Equipment({
   position,
-  size = [1.4, 2, 1.4],
+  size,
   color,
-  label,
   emissive,
   highlighted = false,
 }: {
   position: Vec3;
-  size?: Vec3;
+  size: Vec3;
   color: string;
-  label: string;
   emissive?: string;
   highlighted?: boolean;
 }) {
-  const [x, y, z] = position;
   return (
     <group position={position}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={size} />
+      <RoundedBox args={size} radius={0.08} smoothness={4} castShadow receiveShadow>
         <meshStandardMaterial
           color={color}
+          metalness={0.35}
+          roughness={0.45}
           emissive={highlighted ? "#36d1a6" : emissive ?? "#000000"}
-          emissiveIntensity={highlighted ? 0.7 : emissive ? 0.4 : 0}
+          emissiveIntensity={highlighted ? 0.85 : emissive ? 0.35 : 0}
         />
-      </mesh>
+      </RoundedBox>
 
-      {/* glowing selection outline */}
       {highlighted && (
         <mesh>
-          <boxGeometry args={[size[0] + 0.18, size[1] + 0.18, size[2] + 0.18]} />
-          <meshBasicMaterial color="#36d1a6" wireframe transparent opacity={0.85} />
+          <boxGeometry args={[size[0] + 0.2, size[1] + 0.2, size[2] + 0.2]} />
+          <meshBasicMaterial color="#36d1a6" wireframe transparent opacity={0.9} />
         </mesh>
       )}
-
-      <Text
-        position={[0, size[1] / 2 + 0.35, 0]}
-        fontSize={0.3}
-        color="#cfe3ff"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {label}
-      </Text>
     </group>
   );
 }
