@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LabOps Guardian Voice</title>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <h1>LabOps Guardian</h1>
+        <p class="status" id="status">Text mode ready. Voice uses your browser speech API when available.</p>
+        <div class="controls">
+          <button id="talkButton" type="button">Push to Talk</button>
+          <form id="textForm">
+            <input id="textInput" autocomplete="off" placeholder="Type a lab command..." />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+        <div class="transcript">
+          <h2>Transcript</h2>
+          <div id="messages"></div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
