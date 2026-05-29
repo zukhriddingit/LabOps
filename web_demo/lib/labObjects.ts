@@ -112,7 +112,7 @@ export const LAB_OBJECTS: LabObject[] = [
     code: "CAM",
     label: "Simulated Camera / Shelf Sensor",
     tone: "info",
-    position: [-1, 4.2, 4],
+    position: [-1, 3, 4],
     size: [0.36, 0.36, 0.36],
     color: "#9aa7c7",
     emissive: "#55ccff",

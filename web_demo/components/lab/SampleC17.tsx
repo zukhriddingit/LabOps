@@ -51,9 +51,30 @@ export default function SampleC17() {
 
   return (
     <group ref={group} position={LOCATION_POS[sample.location].toArray()}>
+      {/* glass tube */}
       <mesh castShadow>
-        <cylinderGeometry args={[0.18, 0.18, 0.6, 20]} />
+        <cylinderGeometry args={[0.17, 0.15, 0.62, 24]} />
+        <meshStandardMaterial color="#cfe6ff" metalness={0.1} roughness={0.05} transparent opacity={0.35} />
+      </mesh>
+      {/* conical tube bottom */}
+      <mesh position={[0, -0.36, 0]}>
+        <coneGeometry args={[0.15, 0.16, 24]} />
+        <meshStandardMaterial color="#cfe6ff" metalness={0.1} roughness={0.05} transparent opacity={0.35} />
+      </mesh>
+      {/* liquid (status colour) */}
+      <mesh position={[0, -0.12, 0]}>
+        <cylinderGeometry args={[0.13, 0.12, 0.34, 24]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} />
+      </mesh>
+      {/* cap */}
+      <mesh position={[0, 0.34, 0]} castShadow>
+        <cylinderGeometry args={[0.19, 0.19, 0.12, 24]} />
+        <meshStandardMaterial color="#11203a" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* label band */}
+      <mesh position={[0, 0.02, 0.16]}>
+        <boxGeometry args={[0.22, 0.18, 0.01]} />
+        <meshStandardMaterial color="#f2f6ff" roughness={0.8} />
       </mesh>
 
       {pulsing && (
@@ -63,12 +84,11 @@ export default function SampleC17() {
         </mesh>
       )}
 
-      <Text position={[0, 0.7, 0]} fontSize={0.26} color="#ffffff" anchorX="center">
-        {sample.id}
-      </Text>
-      <Text position={[0, 1.02, 0]} fontSize={0.2} color={color} anchorX="center">
-        {timerLabel}
-      </Text>
+      {onBench && (
+        <Text position={[0, 0.92, 0]} fontSize={0.2} color={color} anchorX="center">
+          {timerLabel}
+        </Text>
+      )}
     </group>
   );
 }

@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, ContactShadows } from "@react-three/drei";
-import Equipment from "./Equipment";
+import LabModel from "./models";
 import SampleC17 from "./SampleC17";
 import Pin from "./Pin";
 import { useLabStore } from "@/store/labStore";
@@ -68,26 +68,15 @@ export default function LabScene() {
       />
       <ContactShadows position={[0, 0.02, 0]} opacity={0.55} scale={46} blur={2.4} far={8} color="#000814" />
 
-      {/* equipment + pins */}
+      {/* equipment models + pins */}
       {LAB_OBJECTS.map((o) => {
-        const pinY = o.position[1] + o.size[1] / 2 + (o.shape === "sphere" ? 0.5 : 0.6);
+        const pinY = o.position[1] + o.size[1] / 2 + (o.shape === "sphere" ? 0.45 : 0.6);
         const pinPos: Vec3 = [o.position[0], pinY, o.position[2]];
         return (
           <group key={o.id}>
-            {o.shape === "sphere" ? (
-              <mesh position={o.position}>
-                <sphereGeometry args={[o.size[0], 20, 20]} />
-                <meshStandardMaterial color={o.color} emissive={o.emissive ?? "#000"} emissiveIntensity={0.6} />
-              </mesh>
-            ) : (
-              <Equipment
-                position={o.position}
-                size={o.size}
-                color={o.color}
-                emissive={o.emissive}
-                highlighted={o.id === "shelf_a" && highlighted === "shelf_a"}
-              />
-            )}
+            <group position={o.position}>
+              <LabModel id={o.id} highlighted={o.id === "shelf_a" && highlighted === "shelf_a"} />
+            </group>
             <Pin
               position={pinPos}
               code={o.code}
