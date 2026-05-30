@@ -1,0 +1,13 @@
+action_endpoint:
+  url: "http://localhost:5055/webhook"
+
+# Rasa Pro/CALM uses LiteLLM-backed model groups. Nebius Token Factory is
+# OpenAI-compatible, so the exact model id/base URL should come from your
+# Nebius console.
+model_groups:
+  - id: nebius-command-generator
+    models:
+      - provider: openai
+        model: ${NEBIUS_COMMAND_MODEL}
+        api_key: ${NEBIUS_API_KEY}
+        api_base: ${NEBIUS_BASE_URL}
