@@ -84,8 +84,44 @@ function pickVoice(): SpeechSynthesisVoice | null {
   return preferredVoice;
 }
 
-export function speak(text: string, onEnd?: () => void): void {
-  if (!speechSynthSupported() || !text.trim()) {
+const VOICE_GATEWAY_URL =
+  process.env.NEXT_PUBLIC_VOICE_GATEWAY_URL ?? "http://localhost:8010";
+
+let currentAudio: HTMLAudioElement | null = null;
+let speakToken = 0;
+
+// Primary TTS: the voice gateway (Speechmatics). Resolves true if it played audio.
+async function speakViaGateway(text: string, token: number, onEnd?: () => void): Promise<boolean> {
+  try {
+    const resp = await fetch(`${VOICE_GATEWAY_URL}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) return false;
+    const blob = await resp.blob();
+    if (!blob.size) return false;
+    if (token !== speakToken) return true; // superseded/cancelled — swallow without playing
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    const done = () => {
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+      onEnd?.();
+    };
+    audio.addEventListener("ended", done, { once: true });
+    audio.addEventListener("error", done, { once: true });
+    await audio.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Fallback TTS: browser Web Speech API (used only if the gateway is unreachable).
+function speakViaBrowser(text: string, onEnd?: () => void): void {
+  if (!speechSynthSupported()) {
     onEnd?.();
     return;
   }
@@ -100,7 +136,29 @@ export function speak(text: string, onEnd?: () => void): void {
   window.speechSynthesis.speak(u);
 }
 
+// Speak a reply — Speechmatics voice gateway first, browser Web Speech as fallback.
+export function speak(text: string, onEnd?: () => void): void {
+  if (!text.trim()) {
+    onEnd?.();
+    return;
+  }
+  cancelSpeak();
+  const token = ++speakToken;
+  void speakViaGateway(text, token, onEnd).then((ok) => {
+    if (!ok && token === speakToken) speakViaBrowser(text, onEnd);
+  });
+}
+
 export function cancelSpeak(): void {
+  speakToken++; // invalidate any in-flight gateway request
+  if (currentAudio) {
+    try {
+      currentAudio.pause();
+    } catch {
+      /* noop */
+    }
+    currentAudio = null;
+  }
   if (speechSynthSupported()) window.speechSynthesis.cancel();
 }
 
