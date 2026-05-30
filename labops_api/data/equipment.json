@@ -7,7 +7,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-30T02:34:25+00:00"
   },
   {
     "id": "bench_2",
@@ -17,7 +17,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-30T02:34:25+00:00"
   },
   {
     "id": "centrifuge_2",
@@ -27,7 +27,7 @@
     "status": "idle",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-30T02:34:25+00:00"
   },
   {
     "id": "microscope_1",
@@ -37,7 +37,7 @@
     "status": "idle",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-30T02:34:25+00:00"
   },
   {
     "id": "shelf_a",
@@ -47,6 +47,6 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T16:47:31+00:00"
+    "updated_at": "2026-05-30T02:34:25+00:00"
   }
 ]

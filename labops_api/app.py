@@ -1,8 +1,7 @@
-"""LabOps Guardian — FastAPI tool & memory server.
+"""LabOps Guardian — FastAPI backend.
 
-The lab's "second brain": sample/cold-chain memory, inventory, calculation validation,
-SOP grounding, reminders, simulated emergency messaging, and shift handoffs. Every fact
-is stamped with a truth-state (source_type + confidence).
+The lab's operational brain: equipment state, sensor anomaly detection, incidents,
+SOP retrieval, maintenance tickets, operational memory, and shift handoffs.
 
 Run:
     pip install -r labops_api/requirements.txt
@@ -12,24 +11,29 @@ Run:
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from labops_api import storage, tools
 from labops_api.models import (
+    AddObservationRequest,
+    CreateIncidentRequest,
     CreateReminderRequest,
+    CreateTicketRequest,
     EventRequest,
     FindInventoryRequest,
     GenerateHandoffRequest,
     MoveSampleRequest,
+    RecallHistoryRequest,
     RetrieveSopRequest,
     SendEmergencyMessageRequest,
     ValidateCalculationRequest,
 )
 from labops_api.storage import next_id, now_iso
 
-app = FastAPI(title="LabOps Guardian API", version="0.1.0")
+app = FastAPI(title="LabOps Guardian API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +44,8 @@ app.add_middleware(
 
 ROOM_TEMP_LOCATIONS = {"bench", "room", "table", "counter"}
 
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _log_event(event_type: str, payload: dict, source_type: str, confidence: str) -> dict:
     events = storage.load("events")
@@ -56,17 +62,102 @@ def _log_event(event_type: str, payload: dict, source_type: str, confidence: str
     return event
 
 
+def _severity_from_exceedance(exceedance_c: float) -> str:
+    """Classify severity by how many °C above the normal_range.max."""
+    if exceedance_c >= 10:
+        return "critical"
+    if exceedance_c >= 5:
+        return "high"
+    if exceedance_c >= 2:
+        return "medium"
+    return "low"
+
+
+def _process_sensor_event(req: EventRequest) -> Optional[dict]:
+    """For temperature_reading events: update equipment state and auto-create/update incidents."""
+    if req.type != "temperature_reading":
+        return None
+
+    equipment_id = req.equipment_id
+    value = req.value
+    if equipment_id is None or value is None:
+        return None
+
+    equipment_list = storage.load("equipment")
+    eq = next((e for e in equipment_list if e["id"] == equipment_id), None)
+    if eq is None:
+        return None
+
+    eq["current_temperature"] = f"{value}{req.unit}"
+    eq["updated_at"] = now_iso()
+
+    normal_range = eq.get("normal_range")
+    incident_result = None
+
+    if normal_range:
+        max_val = normal_range["max"]
+        min_val = normal_range["min"]
+
+        if value > max_val or value < min_val:
+            eq["status"] = "alarm"
+            exceedance = value - max_val if value > max_val else min_val - value
+            severity = _severity_from_exceedance(exceedance)
+            threshold_str = f"{max_val}{req.unit}" if value > max_val else f"{min_val}{req.unit}"
+
+            incidents = storage.load("incidents")
+            existing = next(
+                (i for i in incidents
+                 if i["equipment_id"] == equipment_id and i["status"] == "open"),
+                None,
+            )
+
+            if existing is None:
+                n = len(incidents) + 1
+                incident = {
+                    "incident_id": f"LAB-INC-{n:03d}",
+                    "type": "temperature_excursion",
+                    "equipment_id": equipment_id,
+                    "severity": severity,
+                    "status": "open",
+                    "current_value": eq["current_temperature"],
+                    "threshold": threshold_str,
+                    "observations": [],
+                    "tickets": [],
+                    "created_at": now_iso(),
+                    "updated_at": now_iso(),
+                }
+                incidents.append(incident)
+                incident_result = {"action": "created", "incident": incident}
+            else:
+                existing["current_value"] = eq["current_temperature"]
+                existing["severity"] = severity
+                existing["updated_at"] = now_iso()
+                incident_result = {"action": "updated", "incident": existing}
+
+            storage.save("incidents", incidents)
+        else:
+            eq["status"] = "ok"
+
+    storage.save("equipment", equipment_list)
+    return incident_result
+
+
+# ── Root ──────────────────────────────────────────────────────────────────────
+
 @app.get("/")
 def root() -> dict:
-    return {"service": "LabOps Guardian API", "status": "ok", "time": now_iso()}
+    return {"service": "LabOps Guardian API", "version": "0.2.0", "status": "ok", "time": now_iso()}
 
 
-# ── State & samples ──────────────────────────────────────────────────────────────
+# ── State ─────────────────────────────────────────────────────────────────────
+
 @app.get("/api/state")
 def get_state() -> dict:
     return {
-        "samples": storage.load("samples"),
         "equipment": storage.load("equipment"),
+        "samples": storage.load("samples"),
+        "incidents": storage.load("incidents"),
+        "tickets": storage.load("tickets"),
         "inventory": storage.load("inventory"),
         "reminders": storage.load("reminders"),
         "events": storage.load("events"),
@@ -75,6 +166,44 @@ def get_state() -> dict:
         "server_time": now_iso(),
     }
 
+
+# ── Equipment ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/equipment")
+def get_equipment() -> list[dict]:
+    return storage.load("equipment")
+
+
+@app.get("/api/equipment/{equipment_id}")
+def get_equipment_by_id(equipment_id: str) -> dict:
+    for eq in storage.load("equipment"):
+        if eq["id"] == equipment_id:
+            return eq
+    raise HTTPException(status_code=404, detail=f"Equipment '{equipment_id}' not found")
+
+
+# ── Sensor events ─────────────────────────────────────────────────────────────
+
+@app.post("/api/events")
+def post_event(req: EventRequest) -> dict:
+    payload = req.payload.copy()
+    if req.equipment_id:
+        payload["equipment_id"] = req.equipment_id
+    if req.value is not None:
+        payload["value"] = req.value
+        payload["unit"] = req.unit
+
+    event = _log_event(req.type, payload, req.source_type, req.confidence)
+    incident_result = _process_sensor_event(req)
+
+    response: dict = {"event": event}
+    if incident_result:
+        response["incident_action"] = incident_result["action"]
+        response["incident"] = incident_result["incident"]
+    return response
+
+
+# ── Samples ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/samples")
 def get_samples() -> list[dict]:
@@ -114,16 +243,19 @@ def move_sample(sample_id: str, req: MoveSampleRequest) -> dict:
         reminders = storage.load("reminders")
         warn_at = deadline - timedelta(minutes=2)
         warning = {
-            "id": next_id("rem", reminders), "kind": "warning", "sample_id": sample["sample_id"],
-            "label": f"{sample['sample_id']} nearing the room-temp limit "
-                     f"({req.allowed_room_temp_minutes - 2} min)",
-            "due_at": warn_at.isoformat(timespec="seconds"), "status": "open", "created_at": now_iso(),
+            "id": next_id("rem", reminders), "kind": "warning",
+            "sample_id": sample["sample_id"],
+            "label": f"{sample['sample_id']} nearing room-temp limit ({req.allowed_room_temp_minutes - 2} min)",
+            "due_at": warn_at.isoformat(timespec="seconds"),
+            "status": "open", "created_at": now_iso(),
         }
         reminders.append(warning)
         escalation = {
-            "id": next_id("rem", reminders), "kind": "escalation", "sample_id": sample["sample_id"],
+            "id": next_id("rem", reminders), "kind": "escalation",
+            "sample_id": sample["sample_id"],
             "label": f"{sample['sample_id']} hit the {req.allowed_room_temp_minutes}-min room-temp limit",
-            "due_at": deadline.isoformat(timespec="seconds"), "status": "open", "created_at": now_iso(),
+            "due_at": deadline.isoformat(timespec="seconds"),
+            "status": "open", "created_at": now_iso(),
         }
         reminders.append(escalation)
         storage.save("reminders", reminders)
@@ -143,7 +275,99 @@ def move_sample(sample_id: str, req: MoveSampleRequest) -> dict:
     return {"sample": sample, "reminders": reminders_created, "event": event}
 
 
-# ── Tools ────────────────────────────────────────────────────────────────────────
+# ── Incidents ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/incidents")
+def get_incidents() -> list[dict]:
+    return storage.load("incidents")
+
+
+@app.post("/api/incidents")
+def create_incident(req: CreateIncidentRequest) -> dict:
+    incidents = storage.load("incidents")
+    n = len(incidents) + 1
+    incident = {
+        "incident_id": f"LAB-INC-{n:03d}",
+        "type": req.type,
+        "equipment_id": req.equipment_id,
+        "severity": req.severity,
+        "status": "open",
+        "current_value": req.current_value,
+        "threshold": req.threshold,
+        "observations": [],
+        "tickets": [],
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    incidents.append(incident)
+    storage.save("incidents", incidents)
+    return incident
+
+
+@app.post("/api/incidents/{incident_id}/observations")
+def add_observation(incident_id: str, req: AddObservationRequest) -> dict:
+    incidents = storage.load("incidents")
+    incident = next((i for i in incidents if i["incident_id"] == incident_id), None)
+    if incident is None:
+        raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
+    incident.setdefault("observations", []).append(req.observation)
+    incident["updated_at"] = now_iso()
+    storage.save("incidents", incidents)
+    return incident
+
+
+# ── AI Tools ──────────────────────────────────────────────────────────────────
+
+@app.post("/api/tools/retrieve_sop")
+def retrieve_sop(req: RetrieveSopRequest) -> dict:
+    result = tools.retrieve_sop(
+        issue_type=req.issue_type,
+        equipment_id=req.equipment_id,
+        query=req.query,
+        sample_id=req.sample_id,
+    )
+    _log_event(
+        "sop_retrieved",
+        {"issue_type": req.issue_type, "query": req.query, "result": result},
+        "sop_grounded", "high" if result.get("found") else "low",
+    )
+    return result
+
+
+@app.post("/api/tools/create_ticket")
+def create_ticket(req: CreateTicketRequest) -> dict:
+    incidents = storage.load("incidents")
+    if not any(i["incident_id"] == req.incident_id for i in incidents):
+        raise HTTPException(status_code=404, detail=f"Incident {req.incident_id} not found")
+    ticket = tools.create_ticket(
+        incident_id=req.incident_id,
+        severity=req.severity,
+        assigned_to=req.assigned_to,
+        summary=req.summary,
+        notes=req.notes,
+    )
+    _log_event("ticket_created", {"ticket": ticket}, "human_confirmed", "high")
+    return ticket
+
+
+@app.post("/api/tools/recall_history")
+def recall_history(req: RecallHistoryRequest) -> dict:
+    result = tools.recall_history(req.equipment_id, req.issue_type)
+    _log_event(
+        "history_recalled",
+        {"equipment_id": req.equipment_id, "issue_type": req.issue_type, "found": result.get("found")},
+        "human_confirmed", "high",
+    )
+    return result
+
+
+@app.post("/api/tools/generate_handoff")
+def generate_handoff(req: Optional[GenerateHandoffRequest] = None) -> dict:
+    incident_id = req.incident_id if req else None
+    shift = req.shift if req else None
+    return tools.generate_handoff(shift=shift, incident_id=incident_id)
+
+
 @app.post("/api/tools/validate_calculation")
 def validate_calculation(req: ValidateCalculationRequest) -> dict:
     result = tools.validate_calculation(
@@ -151,14 +375,6 @@ def validate_calculation(req: ValidateCalculationRequest) -> dict:
     )
     _log_event("calculation_validated", {"request": req.model_dump(), "result": result},
                "calculated", result.get("confidence", "medium"))
-    return result
-
-
-@app.post("/api/tools/retrieve_sop")
-def retrieve_sop(req: RetrieveSopRequest) -> dict:
-    result = tools.retrieve_sop(req.query, req.sample_id)
-    _log_event("sop_retrieved", {"query": req.query, "result": result},
-               "sop_grounded", "high" if result.get("found") else "low")
     return result
 
 
@@ -175,7 +391,8 @@ def create_reminder(req: CreateReminderRequest) -> dict:
     reminders = storage.load("reminders")
     reminder = {
         "id": next_id("rem", reminders), "kind": "manual", "label": req.label,
-        "due_at": req.due_at, "sample_id": req.sample_id, "status": "open", "created_at": now_iso(),
+        "due_at": req.due_at, "sample_id": req.sample_id, "status": "open",
+        "created_at": now_iso(),
     }
     reminders.append(reminder)
     storage.save("reminders", reminders)
@@ -196,14 +413,3 @@ def send_emergency_message(req: SendEmergencyMessageRequest) -> dict:
     messages.append(message)
     storage.save("messages", messages)
     return message
-
-
-@app.post("/api/tools/generate_handoff")
-def generate_handoff(req: GenerateHandoffRequest | None = None) -> dict:
-    shift = req.shift if req else None
-    return tools.generate_handoff(shift)
-
-
-@app.post("/api/events")
-def post_event(req: EventRequest) -> dict:
-    return _log_event(req.type, req.payload, req.source_type, req.confidence)
