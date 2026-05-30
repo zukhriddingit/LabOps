@@ -115,7 +115,21 @@ export function toSpeech(input: string): string {
     .map((s) => s.replace(/^\s*[-*+]\s+/, "").replace(/^\s*\d+[.)]\s+/, "").trim())
     .filter(Boolean)
     .map((s) => (/[.!?:,;]$/.test(s) ? s : s + "."));
-  return lines.join(" ").replace(/\s{2,}/g, " ").trim();
+  let out = lines.join(" ").replace(/\s{2,}/g, " ").trim();
+
+  // Keep speech snappy: TTS latency grows with length, so cap to the first ~2 sentences
+  // (~260 chars at a sentence boundary). The full reply still shows on screen as markdown.
+  const MAX = 260;
+  if (out.length > MAX) {
+    const sentences = out.match(/[^.!?]+[.!?]+/g) || [out];
+    let acc = "";
+    for (const s of sentences) {
+      if (acc && (acc + s).length > MAX) break;
+      acc += s;
+    }
+    out = (acc || out.slice(0, MAX)).trim();
+  }
+  return out;
 }
 
 let currentAudio: HTMLAudioElement | null = null;

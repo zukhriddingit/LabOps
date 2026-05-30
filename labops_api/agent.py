@@ -48,8 +48,8 @@ Lab layout (static reference — ALWAYS call get_lab_state for live readings; th
 - Local SOPs cover: cardiovascular tissue prep, freezer temperature excursion, freezer sample storage, centrifuge setup, centrifuge error code 42, inventory shortage, and reagent calculation policy.
 
 Rules you must always follow:
-- NEVER state a temperature, incident ID, sample name/location, count, or any live lab fact unless you retrieved it from a tool in this conversation. The static layout above tells you what exists, NOT its current readings — call a tool for those.
-- Call get_lab_state before answering any question about equipment status, incidents, samples, timers, or the overall inventory. It now also returns reminders (active room-temp timers) and experiment_runs.
+- NEVER state a temperature, incident ID, sample name/location, count, or any live lab fact unless it is in the live snapshot provided this turn or you retrieved it from a tool. The static layout above tells you what exists, NOT its current readings — use the snapshot (or a tool) for those, and never invent them.
+- A CURRENT LAB SNAPSHOT is provided to you every turn. Answer questions about equipment, samples, inventory, and open incidents DIRECTLY from that snapshot — do NOT call get_lab_state for them (that just wastes time). Only call get_lab_state if you genuinely need fresher data right after a change. Use the other tools for changes, SOPs, calculations, history, reminders, or messaging.
 - For general inventory questions call list_inventory; for a specific item's location or stock call find_inventory.
 - To check any reagent math, call validate_calculation. It handles v/v (→ microliters), w/v (→ grams of solid), and stock dilutions (pass stock_percent for C1V1=C2V2). Choose the basis from the wording, report the expected value, and state which basis you assumed.
 - To escalate to a person, use send_emergency_message. ALWAYS draft first (confirmed=false), read the draft back, and only send (confirmed=true) after the user explicitly confirms. Never claim a message was sent unless the tool returns status "sent".
@@ -63,6 +63,7 @@ Rules you must always follow:
 - If asked to update something (resolve an incident, add an observation, create a ticket, post a sensor reading), call the right tool and confirm what you did.
 - After move_sample, only mention incidents or alarms if the tool result includes open_incidents. If open_incidents is empty, do not speculate about alarms.
 - Do not wrap responses in XML tags. Return plain conversational text only.
+/no_think
 """
 
 # ── Tool definitions (OpenAI function-calling format) ─────────────────────────
@@ -506,6 +507,39 @@ def _strip_think(text: str) -> str:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
+def _state_context() -> str:
+    """Compact live snapshot injected each turn so the agent can answer state/inventory/
+    sample questions in ONE call instead of round-tripping through get_lab_state."""
+    equipment = storage.load("equipment")
+    samples = storage.load("samples")
+    inventory = storage.load("inventory")
+    open_incidents = [i for i in storage.load("incidents") if i.get("status") != "resolved"]
+    snap = {
+        "equipment": [
+            {"id": e.get("id"), "name": e.get("name"), "temp": e.get("current_temperature"), "status": e.get("status")}
+            for e in equipment
+        ],
+        "samples": [
+            {"id": s.get("sample_id"), "location": s.get("location"), "storage": s.get("storage_temperature"),
+             "room_temp_deadline": s.get("room_temp_deadline")}
+            for s in samples
+        ],
+        "inventory": [
+            {"item": i.get("item_name"), "location": i.get("location"), "stock": i.get("stock_level"),
+             "confidence": i.get("confidence"),
+             "count": i.get("camera_inferred_count") if i.get("camera_inferred_count") is not None else i.get("record_count")}
+            for i in inventory
+        ],
+        "open_incidents": open_incidents,
+        "server_time": now_iso(),
+    }
+    return (
+        "CURRENT LAB SNAPSHOT (already retrieved for you this turn — answer state/sample/"
+        "inventory/incident questions directly from this; do not call get_lab_state):\n"
+        + json.dumps(snap, separators=(",", ":"))
+    )
+
+
 # ── Main agent call ───────────────────────────────────────────────────────────
 
 async def run(message: str, sender: str = "user") -> str:
@@ -517,6 +551,7 @@ async def run(message: str, sender: str = "user") -> str:
     history = CONVERSATIONS.get(sender, [])[-8:]
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM},
+        {"role": "system", "content": _state_context()},
         *history,
         {"role": "user", "content": message},
     ]
@@ -527,6 +562,7 @@ async def run(message: str, sender: str = "user") -> str:
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
+            max_tokens=400,
         )
         choice = response.choices[0]
 

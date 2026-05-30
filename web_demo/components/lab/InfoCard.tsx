@@ -12,7 +12,12 @@ export default function InfoCard() {
   const inventory = useLabStore((s) => s.inventory);
   const messageStatus = useLabStore((s) => s.messageStatus);
   const moveToBench = useLabStore((s) => s.moveToBench);
+  const moveToFreezer = useLabStore((s) => s.moveToFreezer);
   const moveToBackupFreezer = useLabStore((s) => s.moveToBackupFreezer);
+  const sampleA12 = useLabStore((s) => s.sampleA12);
+  const moveA12 = useLabStore((s) => s.moveA12);
+  const freezerOpen = useLabStore((s) => s.freezerOpen);
+  const toggleFreezerDoor = useLabStore((s) => s.toggleFreezerDoor);
   const findTubes = useLabStore((s) => s.findTubes);
   const draftMessage = useLabStore((s) => s.draftMessage);
   const equipment = useLabStore((s) => s.equipment);
@@ -36,7 +41,10 @@ export default function InfoCard() {
           <button className="btn primary" onClick={moveToBench} disabled={onBench}>
             Move to Bench
           </button>
-          <button className="btn" onClick={moveToBackupFreezer}>
+          <button className="btn" onClick={moveToFreezer} disabled={sample.location === "Freezer"}>
+            Move to Freezer
+          </button>
+          <button className="btn" onClick={moveToBackupFreezer} disabled={sample.location === "Backup Freezer"}>
             Move to Backup Freezer
           </button>
         </div>
@@ -45,15 +53,28 @@ export default function InfoCard() {
   }
 
   if (selectedPinId === "sample_a12") {
+    const a = sampleA12;
+    const onBenchA = a.location === "Bench 2";
+    const timerA = onBenchA
+      ? `${Math.min(DEMO.limitSeconds, a.elapsedDemoSeconds)} / ${a.allowedRoomTempMinutes} min`
+      : "—";
     return (
-      <Card title="Backup tissue sample" code="A12" onClose={() => setSelectedPin(null)}>
-        <Line k="Location" v="Backup Freezer" />
-        <Line k="Status" v={<Badge tone="ok">stored</Badge>} />
-        <Line k="Storage" v="-60C" />
-        <Line k="Source" v={<Badge>user_reported</Badge>} />
-        <p className="card-note">
-          A12 is the backup tissue sample kept in Backup Freezer for the demo state.
-        </p>
+      <Card title={a.label} code="A12" onClose={() => setSelectedPin(null)}>
+        <Line k="Location" v={a.location} />
+        <Line k="Status" v={<Badge tone={tone(a.status)}>{a.status}</Badge>} />
+        <Line k="Room-temp" v={timerA} />
+        <Line k="Storage" v={a.storageTemperature} />
+        <div className="card-actions">
+          <button className="btn primary" onClick={() => moveA12("Bench 2")} disabled={onBenchA}>
+            Move to Bench
+          </button>
+          <button className="btn" onClick={() => moveA12("Freezer")} disabled={a.location === "Freezer"}>
+            Move to Freezer
+          </button>
+          <button className="btn" onClick={() => moveA12("Backup Freezer")} disabled={a.location === "Backup Freezer"}>
+            Move to Backup Freezer
+          </button>
+        </div>
       </Card>
     );
   }
@@ -130,6 +151,13 @@ export default function InfoCard() {
             </p>
           )}
         </>
+      )}
+      {(obj.id === "freezer" || obj.id === "backup_freezer") && (
+        <div className="card-actions">
+          <button className="btn primary" onClick={() => toggleFreezerDoor(obj.id)}>
+            {freezerOpen[obj.id] ? "Close door" : "Open door"}
+          </button>
+        </div>
       )}
     </Card>
   );

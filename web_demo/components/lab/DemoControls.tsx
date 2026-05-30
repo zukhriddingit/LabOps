@@ -7,6 +7,7 @@ export default function DemoControls() {
   const {
     sample,
     moveToBench,
+    moveToFreezer,
     triggerWarning,
     triggerCritical,
     findTubes,
@@ -40,7 +41,10 @@ export default function DemoControls() {
       <button className="btn" onClick={draftMessage} disabled={demoRunning}>
         Draft emergency message
       </button>
-      <button className="btn" onClick={moveToBackupFreezer} disabled={demoRunning}>
+      <button className="btn" onClick={moveToFreezer} disabled={demoRunning || sample.location === "Freezer"}>
+        Move C17 to Freezer
+      </button>
+      <button className="btn" onClick={moveToBackupFreezer} disabled={demoRunning || sample.location === "Backup Freezer"}>
         Move C17 to Backup Freezer
       </button>
       <button className="btn" onClick={simulateExcursion} disabled={demoRunning}>

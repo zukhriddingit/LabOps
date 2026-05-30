@@ -6,6 +6,9 @@
 // reflect real light banks; `envMapIntensity` tunes how strongly. LabModel switches
 // on object id.
 
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { RoundedBox, Text } from "@react-three/drei";
 import { screenTexture, type ScreenLine } from "@/lib/labTextures";
 
@@ -68,14 +71,23 @@ function Freezer({
   door = "#2a63c2",
   alarm = false,
   temp,
+  open = false,
 }: {
   body?: string;
   door?: string;
   emissive?: string;
   alarm?: boolean;
   temp?: string;
+  open?: boolean;
 }) {
   const accent = alarm ? "#ff5d76" : "#7ee5ff";
+  const doorRef = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (doorRef.current) {
+      const target = open ? -2.15 : 0; // swing the door outward when open
+      doorRef.current.rotation.y = THREE.MathUtils.damp(doorRef.current.rotation.y, target, 5, dt);
+    }
+  });
   return (
     <group>
       {/* cabinet */}
@@ -91,59 +103,73 @@ function Freezer({
           clearcoatRoughness={0.18}
         />
       </RoundedBox>
-      {/* recessed door gasket frame */}
-      <mesh position={[0, 0.05, 0.74]}>
-        <boxGeometry args={[1.5, 2.84, 0.04]} />
-        <meshStandardMaterial color="#0c1422" roughness={0.85} />
+      {/* interior revealed when the door opens: dark cavity wall + shelves + cold glow */}
+      <mesh position={[0, 0.05, 0.82]}>
+        <boxGeometry args={[1.36, 2.7, 0.02]} />
+        <meshStandardMaterial color="#0b131d" roughness={0.95} />
       </mesh>
-      {/* door */}
-      <RoundedBox args={[1.4, 2.74, 0.12]} radius={0.05} smoothness={5} position={[0, 0.05, 0.8]} castShadow>
-        <meshPhysicalMaterial
-          color={alarm ? "#5a2030" : door}
-          metalness={0.6}
-          roughness={0.2}
-          envMapIntensity={1.4}
-          clearcoat={0.5}
-          clearcoatRoughness={0.12}
-        />
-      </RoundedBox>
-      {/* engraved door inset line */}
-      <mesh position={[0, 0.05, 0.865]}>
-        <boxGeometry args={[1.18, 2.5, 0.01]} />
-        <meshStandardMaterial color={alarm ? "#6a2436" : "#27559e"} roughness={0.4} metalness={0.5} envMapIntensity={1.2} />
+      <mesh position={[0, 0.05, 0.825]}>
+        <planeGeometry args={[1.2, 2.5]} />
+        <meshStandardMaterial color="#bfe0ff" emissive="#9fd0ff" emissiveIntensity={0.22} toneMapped={false} />
       </mesh>
-      {/* status display */}
-      <Screen
-        position={[0, 1.12, 0.92]}
-        w={0.62}
-        h={0.34}
-        bg={alarm ? "#2a0810" : "#04101c"}
-        accent={accent}
-        lines={
-          alarm
-            ? [
-                { text: "ALARM", size: 80, color: "#ff5d76" },
-                { text: formatTemp(temp), size: 60, color: "#ffb9c4" },
-              ]
-            : [
-                { text: formatTemp(temp), size: 88, color: "#7ee5ff" },
-                { text: "STABLE", size: 44, color: "#9fb6c9" },
-              ]
-        }
-      />
-      {/* tubular handle on standoffs */}
-      <mesh position={[0.56, 0.86, 0.9]} castShadow>
-        <cylinderGeometry args={[0.045, 0.045, 0.16, 12]} />
-        <meshStandardMaterial color="#cfd8e8" metalness={0.95} roughness={0.16} envMapIntensity={1.5} />
-      </mesh>
-      <mesh position={[0.56, -0.66, 0.9]} castShadow>
-        <cylinderGeometry args={[0.045, 0.045, 0.16, 12]} />
-        <meshStandardMaterial color="#cfd8e8" metalness={0.95} roughness={0.16} envMapIntensity={1.5} />
-      </mesh>
-      <mesh position={[0.62, 0.1, 0.9]} castShadow>
-        <cylinderGeometry args={[0.05, 0.05, 1.62, 16]} />
-        <meshStandardMaterial color="#dde4f2" metalness={0.95} roughness={0.14} envMapIntensity={1.6} />
-      </mesh>
+      {[0.7, 0.0, -0.7].map((y) => (
+        <mesh key={y} position={[0, y, 0.84]}>
+          <boxGeometry args={[1.2, 0.04, 0.06]} />
+          <meshStandardMaterial color="#425064" transparent opacity={0.6} metalness={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+
+      {/* hinged door assembly — pivots on the left edge (double-group keeps child coords) */}
+      <group position={[-0.7, 0, 0]}>
+        <group ref={doorRef}>
+          <group position={[0.7, 0, 0]}>
+            <RoundedBox args={[1.4, 2.74, 0.12]} radius={0.05} smoothness={5} position={[0, 0.05, 0.92]} castShadow>
+              <meshPhysicalMaterial
+                color={alarm ? "#5a2030" : door}
+                metalness={0.6}
+                roughness={0.2}
+                envMapIntensity={1.4}
+                clearcoat={0.5}
+                clearcoatRoughness={0.12}
+              />
+            </RoundedBox>
+            <mesh position={[0, 0.05, 0.985]}>
+              <boxGeometry args={[1.18, 2.5, 0.01]} />
+              <meshStandardMaterial color={alarm ? "#6a2436" : "#27559e"} roughness={0.4} metalness={0.5} envMapIntensity={1.2} />
+            </mesh>
+            <Screen
+              position={[0, 1.12, 1.0]}
+              w={0.62}
+              h={0.34}
+              bg={alarm ? "#2a0810" : "#04101c"}
+              accent={accent}
+              lines={
+                alarm
+                  ? [
+                      { text: "ALARM", size: 80, color: "#ff5d76" },
+                      { text: formatTemp(temp), size: 60, color: "#ffb9c4" },
+                    ]
+                  : [
+                      { text: formatTemp(temp), size: 88, color: "#7ee5ff" },
+                      { text: "STABLE", size: 44, color: "#9fb6c9" },
+                    ]
+              }
+            />
+            <mesh position={[0.56, 0.86, 1.02]} castShadow>
+              <cylinderGeometry args={[0.045, 0.045, 0.16, 12]} />
+              <meshStandardMaterial color="#cfd8e8" metalness={0.95} roughness={0.16} envMapIntensity={1.5} />
+            </mesh>
+            <mesh position={[0.56, -0.66, 1.02]} castShadow>
+              <cylinderGeometry args={[0.045, 0.045, 0.16, 12]} />
+              <meshStandardMaterial color="#cfd8e8" metalness={0.95} roughness={0.16} envMapIntensity={1.5} />
+            </mesh>
+            <mesh position={[0.62, 0.1, 1.02]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 1.62, 16]} />
+              <meshStandardMaterial color="#dde4f2" metalness={0.95} roughness={0.14} envMapIntensity={1.6} />
+            </mesh>
+          </group>
+        </group>
+      </group>
       {/* side hinges */}
       {[0.85, -0.55].map((y) => (
         <mesh key={y} position={[-0.72, y, 0.78]} castShadow>
@@ -685,17 +711,19 @@ export default function LabModel({
   highlighted,
   alarm,
   temp,
+  open,
 }: {
   id: string;
   highlighted?: boolean;
   alarm?: boolean;
   temp?: string;
+  open?: boolean;
 }) {
   switch (id) {
     case "freezer":
-      return <Freezer body="#1f4f9e" door="#2a63c2" alarm={alarm} temp={temp ?? "-60C"} />;
+      return <Freezer body="#1f4f9e" door="#2a63c2" alarm={alarm} temp={temp ?? "-60C"} open={open} />;
     case "backup_freezer":
-      return <Freezer body="#1a4480" door="#235194" alarm={alarm} temp={temp ?? "-81C"} />;
+      return <Freezer body="#1a4480" door="#235194" alarm={alarm} temp={temp ?? "-81C"} open={open} />;
     case "bench_2":
       return <Bench />;
     case "centrifuge_2":

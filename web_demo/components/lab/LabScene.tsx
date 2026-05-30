@@ -16,7 +16,7 @@ import { EffectComposer, Bloom, Vignette, ToneMapping } from "@react-three/postp
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import LabModel from "./models";
-import SampleA12, { A12_PIN_POS } from "./SampleA12";
+import SampleA12, { A12_OFFSET } from "./SampleA12";
 import SampleC17 from "./SampleC17";
 import Pin from "./Pin";
 import { useLabStore } from "@/store/labStore";
@@ -65,6 +65,8 @@ export default function LabScene() {
   const viewPreset = useLabStore((s) => s.viewPreset);
   const viewPresetTick = useLabStore((s) => s.viewPresetTick);
   const equipment = useLabStore((s) => s.equipment);
+  const freezerOpen = useLabStore((s) => s.freezerOpen);
+  const sampleA12 = useLabStore((s) => s.sampleA12);
   const eqStatus: Record<string, string> = {};
   const eqTemp: Record<string, string | null> = {};
   for (const e of equipment) {
@@ -146,6 +148,7 @@ export default function LabScene() {
                 highlighted={o.id === "shelf_a" && highlighted === "shelf_a"}
                 alarm={alarm}
                 temp={eqTemp[o.id] ?? undefined}
+                open={!!freezerOpen[o.id]}
               />
               <NamePlate label={o.label} code={o.code} size={o.size} />
             </group>
@@ -161,13 +164,18 @@ export default function LabScene() {
         );
       })}
 
-      {/* Backup sample A12 + its pin */}
+      {/* Backup sample A12 + its pin (now tracks A12's live location) */}
       <SampleA12 />
       <Pin
-        position={A12_PIN_POS}
+        position={[
+          SAMPLE_LOCATION_POS[sampleA12.location][0] + A12_OFFSET[0],
+          SAMPLE_LOCATION_POS[sampleA12.location][1] + 1.2,
+          SAMPLE_LOCATION_POS[sampleA12.location][2] + A12_OFFSET[2],
+        ]}
         code="A12"
-        tone="ok"
+        tone={SAMPLE_STATUS_TONE[sampleA12.status]}
         active={selectedPinId === "sample_a12"}
+        pulse={sampleA12.status === "warning" || sampleA12.status === "critical"}
         onClick={() => setSelectedPin("sample_a12")}
       />
 

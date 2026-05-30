@@ -9,7 +9,7 @@
     "room_temp_deadline": null,
     "source_type": "user_reported",
     "confidence": "high",
-    "updated_at": "2026-05-30T17:31:11+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
     "sample_id": "A12",
@@ -21,6 +21,6 @@
     "room_temp_deadline": null,
     "source_type": "user_reported",
     "confidence": "high",
-    "updated_at": "2026-05-30T17:31:11+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   }
 ]

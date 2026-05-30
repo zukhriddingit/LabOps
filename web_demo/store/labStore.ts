@@ -16,7 +16,19 @@ import {
   recallHistory,
   sendRasaMessage,
 } from "@/lib/api";
-import { DEMO, INITIAL_SAMPLE, TUBES_OBSERVATION } from "@/lib/mockData";
+import { DEMO, INITIAL_SAMPLE, INITIAL_A12, TUBES_OBSERVATION } from "@/lib/mockData";
+import { speak, cancelSpeak } from "@/lib/speech";
+
+// Map a scene location to the freezer equipment id whose door it owns (else null).
+const locToFreezerId = (loc: string): string | null =>
+  loc === "Backup Freezer" ? "backup_freezer" : loc === "Freezer" ? "freezer" : null;
+
+// Open a freezer door, then auto-close it shortly after (the "take it out" flourish).
+function flashDoor(set: (fn: (s: LabState) => Partial<LabState>) => void, id: string | null, ms = 2800) {
+  if (!id) return;
+  set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: true } }));
+  setTimeout(() => set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: false } })), ms);
+}
 import type {
   ConnectionStatus,
   InventoryObservation,
@@ -80,6 +92,10 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface LabState {
   sample: Sample;
+  sampleA12: Sample;
+  freezerOpen: Record<string, boolean>;
+  toggleFreezerDoor: (id: string) => void;
+  moveA12: (to: SampleLocation) => Promise<void>;
   inventory: InventoryObservation | null;
   highlighted: string | null; // equipment id with glowing outline
   connection: ConnectionStatus;
@@ -113,12 +129,17 @@ interface LabState {
 
   // demo actions
   moveToBench: () => Promise<void>;
+  moveToFreezer: () => Promise<void>;
   moveToBackupFreezer: () => Promise<void>;
   triggerWarning: () => void;
   triggerCritical: () => void;
   findTubes: () => Promise<void>;
   draftMessage: () => Promise<void>;
   runDemo: () => Promise<void>;
+  stopDemo: () => void;
+  demoCaption: string | null;
+  demoStep: number;
+  demoTotal: number;
   advanceTranscript: () => void;
   reset: () => void;
 
@@ -133,6 +154,8 @@ interface LabState {
 
 export const useLabStore = create<LabState>((set, get) => ({
   sample: { ...INITIAL_SAMPLE },
+  sampleA12: { ...INITIAL_A12 },
+  freezerOpen: {},
   inventory: null,
   highlighted: null,
   connection: "checking",
@@ -152,6 +175,9 @@ export const useLabStore = create<LabState>((set, get) => ({
   viewPreset: "entry",
   viewPresetTick: 0,
   demoRunning: false,
+  demoCaption: null,
+  demoStep: 0,
+  demoTotal: 0,
   voiceLog: [],
   voiceBrain: "unknown",
   listening: false,
@@ -229,16 +255,25 @@ export const useLabStore = create<LabState>((set, get) => ({
   },
 
   tick: () => {
-    const { sample } = get();
-    if (sample.status !== "tracking" && sample.status !== "warning") return;
-    const elapsed = sample.elapsedDemoSeconds + 1;
-    let status: SampleStatus = sample.status;
-    if (elapsed >= DEMO.limitSeconds) status = "critical";
-    else if (elapsed >= DEMO.warningSeconds) status = "warning";
-    set({ sample: { ...sample, elapsedDemoSeconds: elapsed, status } });
+    const advance = (s: Sample): Sample => {
+      if (s.status !== "tracking" && s.status !== "warning") return s;
+      const elapsed = s.elapsedDemoSeconds + 1;
+      let status: SampleStatus = s.status;
+      if (elapsed >= DEMO.limitSeconds) status = "critical";
+      else if (elapsed >= DEMO.warningSeconds) status = "warning";
+      return { ...s, elapsedDemoSeconds: elapsed, status };
+    };
+    set((st) => {
+      const c17 = advance(st.sample);
+      const a12 = advance(st.sampleA12);
+      if (c17 === st.sample && a12 === st.sampleA12) return {};
+      return { sample: c17, sampleA12: a12 };
+    });
   },
 
   moveToBench: async () => {
+    const from = get().sample.location;
+    flashDoor(set, locToFreezerId(from)); // open the freezer C17 is leaving
     set((s) => ({
       sample: {
         ...s.sample,
@@ -251,9 +286,34 @@ export const useLabStore = create<LabState>((set, get) => ({
     }));
     try {
       await moveSample("C17", {
-        from_location: "Freezer",
+        from_location: from,
         to_location: "Bench 2",
-        from_temperature: "-60C",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
+        allowed_room_temp_minutes: 20,
+      });
+      set({ connection: "connected" });
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  moveToFreezer: async () => {
+    const from = get().sample.location; // capture BEFORE the optimistic update
+    flashDoor(set, "freezer"); // open the destination door as C17 goes in
+    set((s) => ({
+      sample: {
+        ...s.sample,
+        location: "Freezer",
+        status: "stored",
+        elapsedDemoSeconds: 0,
+        roomTempStartedAt: undefined,
+      },
+    }));
+    try {
+      await moveSample("C17", {
+        from_location: from,
+        to_location: "Freezer",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
         allowed_room_temp_minutes: 20,
       });
       set({ connection: "connected" });
@@ -264,6 +324,7 @@ export const useLabStore = create<LabState>((set, get) => ({
 
   moveToBackupFreezer: async () => {
     const from = get().sample.location; // capture BEFORE the optimistic update
+    flashDoor(set, "backup_freezer");
     set((s) => ({
       sample: {
         ...s.sample,
@@ -285,6 +346,36 @@ export const useLabStore = create<LabState>((set, get) => ({
       set({ connection: "disconnected" });
     }
   },
+
+  // A12 (backup sample) — now fully movable, mirroring C17.
+  moveA12: async (to) => {
+    const from = get().sampleA12.location;
+    const toBench = to === "Bench 2";
+    flashDoor(set, toBench ? locToFreezerId(from) : locToFreezerId(to));
+    set((s) => ({
+      sampleA12: {
+        ...s.sampleA12,
+        location: to,
+        status: toBench ? "tracking" : to === "Freezer" ? "stored" : "stabilized",
+        elapsedDemoSeconds: 0,
+        roomTempStartedAt: toBench ? new Date().toISOString() : undefined,
+      },
+    }));
+    try {
+      await moveSample("A12", {
+        from_location: from,
+        to_location: to,
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
+        allowed_room_temp_minutes: 20,
+      });
+      set({ connection: "connected" });
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  toggleFreezerDoor: (id) =>
+    set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: !s.freezerOpen[id] } })),
 
   triggerWarning: () =>
     set((s) => ({
@@ -336,48 +427,106 @@ export const useLabStore = create<LabState>((set, get) => ({
     }
   },
 
+  // Narrated, captioned guided tour. Each beat moves the camera, runs the real action,
+  // shows a caption, and is spoken aloud (Speechmatics). Pacing waits for the narration
+  // (capped) AND a minimum dwell, so it stays watchable even if muted.
   runDemo: async () => {
     if (get().demoRunning) return;
 
+    const narrate = (t: string) =>
+      new Promise<void>((resolve) => {
+        let done = false;
+        const fin = () => {
+          if (!done) {
+            done = true;
+            resolve();
+          }
+        };
+        speak(t, fin);
+        setTimeout(fin, 12000); // safety cap
+      });
+
+    type Beat = {
+      caption: string;
+      say: string;
+      camera: LabViewPreset;
+      pin: string | null;
+      run?: () => Promise<void> | void;
+      dwell: number;
+    };
+
+    const beats: Beat[] = [
+      { caption: "Welcome", camera: "entry", pin: null, dwell: 3200,
+        say: "Welcome to LabOps Guardian, your always-on lab coworker. Let me walk you through a shift." },
+      { caption: "Sample C17 in cold storage", camera: "cold", pin: "sample", dwell: 3200,
+        say: "This is sample C17, cardiovascular tissue, resting at minus sixty degrees in the freezer." },
+      { caption: "Out onto the bench — timer starts", camera: "bench", pin: "sample", dwell: 2600, run: () => get().moveToBench(),
+        say: "I'm logging C17 out onto Bench 2. A twenty minute room temperature timer starts now, and I've set a warning and an escalation reminder." },
+      { caption: "Checking a reagent calculation", camera: "bench", pin: "sample", dwell: 1800,
+        say: "Quick math check. Zero point zero two percent in one hundred milliliters is twenty microliters. Correct, assuming volume per volume." },
+      { caption: "Finding inventory", camera: "inventory", pin: "shelf_a", dwell: 2600, run: () => get().findTubes(),
+        say: "You need fifteen milliliter tubes. Inventory says Shelf A, bin three. The shelf camera sees two boxes at medium confidence, so please confirm." },
+      { caption: "Approaching the limit", camera: "bench", pin: "sample", dwell: 2000, run: () => get().triggerWarning(),
+        say: "Heads up. C17 is approaching its room temperature limit." },
+      { caption: "Limit exceeded — escalate to a human", camera: "message", pin: "pi_postdoc", dwell: 2800,
+        run: async () => { get().triggerCritical(); await get().draftMessage(); },
+        say: "C17 has hit the limit. Your gloves are contaminated, so I've drafted a message to the postdoc for you to confirm." },
+      { caption: "Back to safety", camera: "cold", pin: "sample", dwell: 2600, run: () => get().moveToBackupFreezer(),
+        say: "Stabilizing C17 in the backup freezer. Crisis averted." },
+      { caption: "Truth states — how I know what I know", camera: "overview", pin: null, dwell: 3600,
+        say: "Every fact I gave you was tagged with how I knew it and how confident I was. I never present a guess as a fact." },
+    ];
+
+    // Clean start without flipping demoRunning off (reset() would).
+    cancelSpeak();
     set((s) => ({
+      sample: { ...INITIAL_SAMPLE },
+      inventory: null,
+      highlighted: null,
+      messageStatus: "none",
+      messageDraft: null,
+      lastMsgKey: "",
+      voiceLog: [],
       demoRunning: true,
-      dashboardOpen: true,
+      dashboardOpen: false,
+      selectedPinId: null,
       viewPreset: "entry",
       viewPresetTick: s.viewPresetTick + 1,
+      demoCaption: null,
+      demoStep: 0,
+      demoTotal: beats.length,
+      transcriptShown: 2,
     }));
-    get().reset();
-    set((s) => ({
-      demoRunning: true,
-      dashboardOpen: true,
-      viewPreset: "cold",
-      viewPresetTick: s.viewPresetTick + 1,
-    }));
-    await wait(900);
+    await wait(700);
 
-    await get().moveToBench();
-    set((s) => ({ viewPreset: "bench", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 2, selectedPinId: "sample" }));
-    await wait(1900);
+    for (let i = 0; i < beats.length; i++) {
+      if (!get().demoRunning) break; // stopped
+      const b = beats[i];
+      set((s) => ({
+        viewPreset: b.camera,
+        viewPresetTick: s.viewPresetTick + 1,
+        selectedPinId: b.pin,
+        demoCaption: b.caption,
+        demoStep: i + 1,
+      }));
+      if (b.run) {
+        try {
+          await b.run();
+        } catch {
+          /* keep the tour going */
+        }
+      }
+      if (!get().demoRunning) break;
+      set((s) => ({ voiceLog: [...s.voiceLog, { who: "agent" as const, text: b.say }].slice(-20) }));
+      await Promise.all([narrate(b.say), wait(b.dwell)]);
+    }
 
-    get().triggerWarning();
-    set({ transcriptShown: 2, selectedPinId: "sample" });
-    await wait(1200);
+    set({ demoRunning: false, demoCaption: null });
+  },
 
-    set((s) => ({ viewPreset: "inventory", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 3, selectedPinId: "shelf_a" }));
-    await wait(900);
-    await get().findTubes();
-    set({ transcriptShown: 4, selectedPinId: "shelf_a" });
-    await wait(1600);
-
-    get().triggerCritical();
-    set((s) => ({ viewPreset: "message", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 5, selectedPinId: "pi_postdoc" }));
-    await wait(900);
-    await get().draftMessage();
-    set({ transcriptShown: 6, selectedPinId: "pi_postdoc" });
-    await wait(1600);
-
-    set((s) => ({ viewPreset: "cold", viewPresetTick: s.viewPresetTick + 1, selectedPinId: "sample" }));
-    await get().moveToBackupFreezer();
-    set({ demoRunning: false, transcriptShown: 6, selectedPinId: "sample" });
+  stopDemo: () => {
+    cancelSpeak();
+    set({ demoRunning: false, demoCaption: null });
   },
 
   setListening: (b) => set({ listening: b }),
@@ -529,7 +678,14 @@ export const useLabStore = create<LabState>((set, get) => ({
             .join("; ")}.`
         : "No open incidents. All monitored equipment is within range.";
     }
-    // 6. move to backup freezer
+    // 6a. move back to the PRIMARY freezer (explicit)
+    else if (
+      /(primary freezer|main freezer|freezer a|home freezer|original freezer|back (in|to|into) (the )?(primary|main|its|original) freezer)/.test(t)
+    ) {
+      await get().moveToFreezer();
+      reply = "Moving C17 back to the primary freezer.";
+    }
+    // 6b. move to backup freezer / generic "put it back in cold"
     else if (
       /(backup|freezer d|put it back|back (in|to|into) (the )?(freezer|storage|cold)|stabiliz|return.*storage)/.test(t)
     ) {
@@ -591,6 +747,8 @@ export const useLabStore = create<LabState>((set, get) => ({
   reset: () =>
     set({
       sample: { ...INITIAL_SAMPLE },
+      sampleA12: { ...INITIAL_A12 },
+      freezerOpen: {},
       inventory: null,
       highlighted: null,
       messageStatus: "none",

@@ -12,6 +12,16 @@ export const INITIAL_SAMPLE: Sample = {
   elapsedDemoSeconds: 0,
 };
 
+export const INITIAL_A12: Sample = {
+  id: "A12",
+  label: "Backup tissue sample",
+  location: "Backup Freezer",
+  status: "stabilized",
+  storageTemperature: "-60C",
+  allowedRoomTempMinutes: 20,
+  elapsedDemoSeconds: 0,
+};
+
 export const TUBES_OBSERVATION: InventoryObservation = {
   item_id: "15ml_tubes",
   item_name: "15 mL tubes",
