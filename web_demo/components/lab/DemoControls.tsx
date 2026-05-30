@@ -25,25 +25,25 @@ export default function DemoControls() {
       <button className="btn primary" onClick={runDemo} disabled={demoRunning}>
         {demoRunning ? "Running scripted demo..." : "Run guided demo"}
       </button>
-      <button className="btn primary" onClick={moveToBench} disabled={onBench}>
+      <button className="btn primary" onClick={moveToBench} disabled={onBench || demoRunning}>
         Move C17 to Bench
       </button>
-      <button className="btn" onClick={triggerWarning}>
+      <button className="btn" onClick={triggerWarning} disabled={demoRunning}>
         Trigger 18-min warning
       </button>
-      <button className="btn" onClick={triggerCritical}>
+      <button className="btn" onClick={triggerCritical} disabled={demoRunning}>
         Trigger 20-min escalation
       </button>
-      <button className="btn" onClick={findTubes}>
+      <button className="btn" onClick={findTubes} disabled={demoRunning}>
         Find 15 mL tubes
       </button>
-      <button className="btn" onClick={draftMessage}>
+      <button className="btn" onClick={draftMessage} disabled={demoRunning}>
         Draft emergency message
       </button>
-      <button className="btn" onClick={moveToBackupFreezer}>
+      <button className="btn" onClick={moveToBackupFreezer} disabled={demoRunning}>
         Move C17 to Backup Freezer
       </button>
-      <button className="btn" onClick={simulateExcursion}>
+      <button className="btn" onClick={simulateExcursion} disabled={demoRunning}>
         Simulate freezer excursion
       </button>
       <button className="btn ghost" onClick={reset}>

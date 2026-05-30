@@ -85,6 +85,7 @@ interface LabState {
   connection: ConnectionStatus;
   messageStatus: MessageStatus;
   messageDraft: string | null;
+  lastMsgKey: string; // tracks the latest backend message (id:status) to detect new drafts/sends
   transcript: TranscriptLine[];
   transcriptShown: number;
 
@@ -137,6 +138,7 @@ export const useLabStore = create<LabState>((set, get) => ({
   connection: "checking",
   messageStatus: "none",
   messageDraft: null,
+  lastMsgKey: "",
   transcript: TRANSCRIPT,
   transcriptShown: 2,
 
@@ -179,9 +181,25 @@ export const useLabStore = create<LabState>((set, get) => ({
         );
         const loc = toSceneLocation(c17?.location);
         const cur = get().sample;
-        if (loc && loc !== cur.location) {
+        // Only adopt a backend-driven move when the sample is at rest locally, so we
+        // never clobber an active bench/warning/critical state (e.g. the trigger buttons
+        // or a live timer) whose move wasn't persisted to the backend.
+        const atRest = cur.status === "stored" || cur.status === "stabilized";
+        if (loc && loc !== cur.location && atRest) {
           patch.sample = sampleFromBackendMove(cur, loc);
         }
+      }
+
+      // Reflect agent/voice-driven emergency drafts + sends in the UI (MessagePanel,
+      // pi_postdoc glow). React only to a NEW message or a draft->sent change so a
+      // local reset stays clean.
+      const msgs: any[] = s.messages ?? [];
+      const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+      const key = lastMsg ? `${lastMsg.id}:${lastMsg.status}` : "";
+      if (key && key !== get().lastMsgKey) {
+        patch.lastMsgKey = key;
+        patch.messageStatus = lastMsg.status === "sent" ? "sent" : "draft";
+        patch.messageDraft = lastMsg.message ?? get().messageDraft;
       }
 
       set(patch as LabState);
@@ -577,6 +595,7 @@ export const useLabStore = create<LabState>((set, get) => ({
       highlighted: null,
       messageStatus: "none",
       messageDraft: null,
+      lastMsgKey: "",
       transcriptShown: 2,
       selectedPinId: null,
       viewPreset: "entry",

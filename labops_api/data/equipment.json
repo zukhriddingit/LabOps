@@ -12,7 +12,7 @@
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "backup_freezer",
@@ -27,7 +27,7 @@
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "bench_2",
@@ -37,7 +37,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "centrifuge_2",
@@ -47,7 +47,7 @@
     "status": "idle",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "microscope_1",
@@ -57,7 +57,7 @@
     "status": "idle",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "shelf_a",
@@ -67,7 +67,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "co2_incubator",
@@ -82,7 +82,7 @@
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "reagent_fridge",
@@ -97,7 +97,7 @@
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "chem_cabinet_1",
@@ -107,7 +107,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "biosafety_cabinet",
@@ -117,7 +117,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "autoclave",
@@ -127,7 +127,7 @@
     "status": "idle",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "pipette_station",
@@ -137,7 +137,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "biohazard_bin",
@@ -147,7 +147,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "sim_camera",
@@ -157,7 +157,7 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   },
   {
     "id": "pi_postdoc",
@@ -167,6 +167,6 @@
     "status": "ok",
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T16:19:49+00:00"
+    "updated_at": "2026-05-30T17:31:11+00:00"
   }
 ]

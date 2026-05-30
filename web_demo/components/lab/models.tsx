@@ -11,6 +11,14 @@ import { screenTexture, type ScreenLine } from "@/lib/labTextures";
 
 const HILITE = "#36d1a6";
 
+// Format a backend temperature string ("-81C") for an instrument screen ("−81 °C").
+function formatTemp(t?: string | null): string {
+  if (!t) return "—";
+  const m = String(t).match(/-?\d+(\.\d+)?/);
+  if (!m) return String(t);
+  return `${m[0].replace("-", "−")} °C`;
+}
+
 function Outline({ size }: { size: [number, number, number] }) {
   return (
     <mesh>
@@ -59,11 +67,13 @@ function Freezer({
   body = "#1f4f9e",
   door = "#2a63c2",
   alarm = false,
+  temp,
 }: {
   body?: string;
   door?: string;
   emissive?: string;
   alarm?: boolean;
+  temp?: string;
 }) {
   const accent = alarm ? "#ff5d76" : "#7ee5ff";
   return (
@@ -113,10 +123,10 @@ function Freezer({
           alarm
             ? [
                 { text: "ALARM", size: 80, color: "#ff5d76" },
-                { text: "−41 °C", size: 60, color: "#ffb9c4" },
+                { text: formatTemp(temp), size: 60, color: "#ffb9c4" },
               ]
             : [
-                { text: "−60 °C", size: 92, color: "#7ee5ff" },
+                { text: formatTemp(temp), size: 88, color: "#7ee5ff" },
                 { text: "STABLE", size: 44, color: "#9fb6c9" },
               ]
         }
@@ -674,16 +684,18 @@ export default function LabModel({
   id,
   highlighted,
   alarm,
+  temp,
 }: {
   id: string;
   highlighted?: boolean;
   alarm?: boolean;
+  temp?: string;
 }) {
   switch (id) {
     case "freezer":
-      return <Freezer body="#1f4f9e" door="#2a63c2" alarm={alarm} />;
+      return <Freezer body="#1f4f9e" door="#2a63c2" alarm={alarm} temp={temp ?? "-60C"} />;
     case "backup_freezer":
-      return <Freezer body="#1a4480" door="#235194" alarm={alarm} />;
+      return <Freezer body="#1a4480" door="#235194" alarm={alarm} temp={temp ?? "-81C"} />;
     case "bench_2":
       return <Bench />;
     case "centrifuge_2":

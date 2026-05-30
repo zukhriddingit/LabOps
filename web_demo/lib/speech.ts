@@ -87,6 +87,37 @@ function pickVoice(): SpeechSynthesisVoice | null {
 const VOICE_GATEWAY_URL =
   process.env.NEXT_PUBLIC_VOICE_GATEWAY_URL ?? "http://localhost:8010";
 
+// Turn a markdown/rich reply into a clean, natural utterance for TTS:
+// drop markup, LaTeX, emojis; spell common units; make each list item its own
+// sentence so the voice pauses instead of running everything together.
+export function toSpeech(input: string): string {
+  let t = input ?? "";
+  t = t.replace(/```[\s\S]*?```/g, " ");                       // code fences
+  t = t.replace(/\$\$[\s\S]*?\$\$/g, " ").replace(/\$[^$\n]*\$/g, " "); // LaTeX
+  t = t.replace(/\\\[[\s\S]*?\\\]/g, " ").replace(/\\\([\s\S]*?\\\)/g, " ");
+  t = t.replace(/`([^`]+)`/g, "$1");                            // inline code
+  t = t.replace(/!\[[^\]]*\]\([^)]*\)/g, " ");                  // images
+  t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");                // links → text
+  t = t.replace(/^\s{0,3}#{1,6}\s*/gm, "");                     // headings
+  t = t.replace(/^\s*>\s?/gm, "");                              // blockquotes
+  t = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1"); // bold
+  t = t.replace(/\*([^*]+)\*/g, "$1").replace(/(^|\s)_([^_]+)_(?=\s|$)/g, "$1$2"); // italic
+  t = t.replace(/\|/g, " ").replace(/^-{3,}\s*$/gm, " ");       // tables / hr
+  // spell out units/symbols a voice would mangle
+  t = t.replace(/°\s*C/gi, " degrees Celsius").replace(/°\s*F/gi, " degrees Fahrenheit").replace(/°/g, " degrees");
+  t = t.replace(/(\d)\s*%/g, "$1 percent").replace(/%/g, " percent");
+  t = t.replace(/µ/g, "micro").replace(/×/g, " times").replace(/→/g, " to ");
+  // strip emojis / pictographs / arrows
+  t = t.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, "");
+  // each non-empty line becomes a sentence (so list bullets get a pause)
+  const lines = t
+    .split(/\r?\n+/)
+    .map((s) => s.replace(/^\s*[-*+]\s+/, "").replace(/^\s*\d+[.)]\s+/, "").trim())
+    .filter(Boolean)
+    .map((s) => (/[.!?:,;]$/.test(s) ? s : s + "."));
+  return lines.join(" ").replace(/\s{2,}/g, " ").trim();
+}
+
 let currentAudio: HTMLAudioElement | null = null;
 let speakToken = 0;
 
@@ -104,14 +135,21 @@ async function speakViaGateway(text: string, token: number, onEnd?: () => void):
     if (token !== speakToken) return true; // superseded/cancelled — swallow without playing
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
-    currentAudio = audio;
+    let finished = false;
     const done = () => {
+      if (finished) return; // guard against error+ended both firing
+      finished = true;
       URL.revokeObjectURL(url);
       if (currentAudio === audio) currentAudio = null;
       onEnd?.();
     };
     audio.addEventListener("ended", done, { once: true });
     audio.addEventListener("error", done, { once: true });
+    if (token !== speakToken) {
+      URL.revokeObjectURL(url); // cancelled between fetch and play
+      return true;
+    }
+    currentAudio = audio;
     await audio.play();
     return true;
   } catch {
@@ -137,15 +175,17 @@ function speakViaBrowser(text: string, onEnd?: () => void): void {
 }
 
 // Speak a reply — Speechmatics voice gateway first, browser Web Speech as fallback.
+// The raw (markdown) text is cleaned to a natural utterance before speaking.
 export function speak(text: string, onEnd?: () => void): void {
-  if (!text.trim()) {
+  const spoken = toSpeech(text);
+  if (!spoken.trim()) {
     onEnd?.();
     return;
   }
   cancelSpeak();
   const token = ++speakToken;
-  void speakViaGateway(text, token, onEnd).then((ok) => {
-    if (!ok && token === speakToken) speakViaBrowser(text, onEnd);
+  void speakViaGateway(spoken, token, onEnd).then((ok) => {
+    if (!ok && token === speakToken) speakViaBrowser(spoken, onEnd);
   });
 }
 

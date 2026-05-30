@@ -386,7 +386,8 @@ def generate_handoff(req: GenerateHandoffRequest | None = None) -> dict:
 @app.post("/api/tools/validate_calculation")
 def validate_calculation(req: ValidateCalculationRequest) -> dict:
     result = tools.validate_calculation(
-        req.calculation_type, req.target_percent, req.final_volume_ml, req.user_answer_ul
+        req.calculation_type, req.target_percent, req.final_volume_ml, req.user_answer_ul,
+        req.stock_percent, req.user_answer_g,
     )
     _log_event("calculation_validated", {"request": req.model_dump(), "result": result},
                "calculated", result.get("confidence", "medium"))

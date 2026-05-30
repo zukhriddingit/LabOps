@@ -66,7 +66,11 @@ export default function LabScene() {
   const viewPresetTick = useLabStore((s) => s.viewPresetTick);
   const equipment = useLabStore((s) => s.equipment);
   const eqStatus: Record<string, string> = {};
-  for (const e of equipment) eqStatus[e.id] = e.status;
+  const eqTemp: Record<string, string | null> = {};
+  for (const e of equipment) {
+    eqStatus[e.id] = e.status;
+    eqTemp[e.id] = e.current_temperature;
+  }
   const controlsRef = useRef<any>(null);
 
   const samplePos = SAMPLE_LOCATION_POS[sample.location];
@@ -141,6 +145,7 @@ export default function LabScene() {
                 id={o.id}
                 highlighted={o.id === "shelf_a" && highlighted === "shelf_a"}
                 alarm={alarm}
+                temp={eqTemp[o.id] ?? undefined}
               />
               <NamePlate label={o.label} code={o.code} size={o.size} />
             </group>
@@ -445,7 +450,9 @@ function NamePlate({ label, code, size }: { label: string; code: string; size: V
 function StateGlows({ sampleStatus, messageStatus }: { sampleStatus: SampleStatus; messageStatus: string }) {
   const benchAlert = sampleStatus === "warning" || sampleStatus === "critical";
   const benchColor = sampleStatus === "critical" ? "#ff3b5c" : "#ffb020";
-  const messageActive = messageStatus === "draft" || sampleStatus === "critical";
+  // Glow the PI/Postdoc station only when a message is actually pending — not merely
+  // because the sample is critical (that already has its own red bench glow).
+  const messageActive = messageStatus === "draft";
 
   // anchor to the live data positions instead of hardcoded coordinates
   const bench = SAMPLE_LOCATION_POS["Bench 2"];

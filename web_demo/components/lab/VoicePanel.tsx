@@ -10,6 +10,7 @@ import {
   warmUpVoices,
   type Recognizer,
 } from "@/lib/speech";
+import Markdown from "./Markdown";
 
 export default function VoicePanel() {
   const voiceLog = useLabStore((s) => s.voiceLog);
@@ -153,7 +154,11 @@ export default function VoicePanel() {
         {voiceLog.map((l, i) => (
           <div key={i} className={`voice-line ${l.who}`}>
             <span className="who">{l.who === "human" ? "You" : "Guardian"}</span>
-            <span className="txt">{l.text}</span>
+            {l.who === "agent" ? (
+              <Markdown text={l.text} className="txt md" />
+            ) : (
+              <span className="txt">{l.text}</span>
+            )}
           </div>
         ))}
         {partial && <div className="voice-partial">{partial}…</div>}
