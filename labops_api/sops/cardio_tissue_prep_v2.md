@@ -13,7 +13,7 @@ Local SOP for preparing cardiovascular tissue samples (e.g. sample C17) for down
 analysis. Covers cold-chain handling and centrifuge setup.
 
 ## Cold-chain limits
-- Storage: **-60 °C** (Freezer B).
+- Storage: **-60 °C** (Freezer).
 - Maximum time at room temperature: **20 minutes** before the sample must return to
   controlled storage or proceed to the next step.
 

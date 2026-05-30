@@ -7,7 +7,7 @@ BASE="${1:-http://localhost:8000}"
 echo "== move C17 to Bench 2 =="
 curl -s -X POST "$BASE/api/samples/C17/move" \
   -H 'Content-Type: application/json' \
-  -d '{"from_location":"Freezer B","to_location":"Bench 2","from_temperature":"-60C","allowed_room_temp_minutes":20}'
+  -d '{"from_location":"Freezer","to_location":"Bench 2","from_temperature":"-60C","allowed_room_temp_minutes":20}'
 echo; echo
 
 echo "== validate 0.02% v/v in 100 mL = 20 uL =="

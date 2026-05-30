@@ -76,7 +76,7 @@ Move a sample and (if it leaves cold storage) start the room-temperature clock +
 Request:
 ```json
 {
-  "from_location": "Freezer B",
+  "from_location": "Freezer",
   "to_location": "Bench 2",
   "from_temperature": "-60C",
   "allowed_room_temp_minutes": 20
@@ -219,7 +219,7 @@ Response → the stored `Event`.
 {
   "sample_id": "C17",
   "name": "Cardiovascular tissue sample",
-  "location": "Freezer B",
+  "location": "Freezer",
   "storage_temperature": "-60C",
   "max_room_temp_minutes": 20,
   "room_temp_started_at": null,        // ISO ts when it left cold storage, else null
@@ -230,7 +230,7 @@ Response → the stored `Event`.
 }
 
 // Equipment
-{ "id": "freezer_b", "name": "Freezer B", "kind": "freezer",
+{ "id": "freezer", "name": "Freezer", "kind": "freezer",
   "current_temperature": "-60C", "status": "ok",
   "source_type": "observed_by_sensor", "confidence": "high", "updated_at": "..." }
 

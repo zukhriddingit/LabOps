@@ -1,0 +1,77 @@
+version: "3.1"
+
+flows:
+  move_sample:
+    description: Log a wet-lab sample movement, cold-chain status, and room-temperature timer.
+    steps:
+      - action: action_move_sample
+
+  validate_lab_calculation:
+    description: Validate a lab calculation using backend policy and explicit assumptions.
+    steps:
+      - action: action_validate_lab_calculation
+
+  find_inventory:
+    description: Find current inventory from the LabOps database and camera confidence metadata.
+    steps:
+      - action: action_find_inventory
+
+  retrieve_sop:
+    description: Retrieve SOP-grounded lab guidance without inventing protocol details.
+    steps:
+      - action: action_retrieve_lab_sop
+
+  draft_emergency_message:
+    description: Draft an emergency message and require human confirmation before sending.
+    steps:
+      - action: action_draft_emergency_message
+
+  confirm_emergency_message:
+    description: Send a pending emergency message after explicit user confirmation.
+    steps:
+      - action: action_send_emergency_message
+
+  cancel_emergency_message:
+    description: Cancel a pending emergency message without sending it.
+    steps:
+      - action: action_cancel_emergency_message
+
+  generate_handoff:
+    description: Generate a shift handoff from backend lab state, history, and uncertainty metadata.
+    steps:
+      - action: action_generate_lab_handoff
+
+  get_lab_state:
+    description: Summarize the current lab state from the database source of truth.
+    steps:
+      - action: action_get_lab_state
+
+  log_daily_activity:
+    description: Log who did what in the lab today as a user-reported activity event.
+    steps:
+      - action: action_log_daily_activity
+
+  get_person_daily_activity:
+    description: Summarize one person's recorded lab activity for today.
+    steps:
+      - action: action_get_person_daily_activity
+
+  create_reminder:
+    description: Create a lab reminder through the backend tool server.
+    steps:
+      - action: action_create_lab_reminder
+
+  recall_history:
+    description: Recall prior incidents for a piece of equipment, with uncertainty note that past cause does not confirm current cause.
+    steps:
+      - action: action_recall_history
+
+  get_open_incidents:
+    description: List all currently open incidents in the lab.
+    steps:
+      - action: action_get_open_incidents
+
+  create_maintenance_ticket:
+    description: Create a maintenance ticket for an open incident and assign it to Facilities.
+    steps:
+      - action: action_create_maintenance_ticket

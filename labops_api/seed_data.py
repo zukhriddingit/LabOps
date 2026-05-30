@@ -15,7 +15,7 @@ SAMPLES = [
     {
         "sample_id": "C17",
         "name": "Cardiovascular tissue sample",
-        "location": "Freezer B",
+        "location": "Freezer",
         "storage_temperature": "-60C",
         "max_room_temp_minutes": 20,
         "room_temp_started_at": None,
@@ -27,7 +27,7 @@ SAMPLES = [
     {
         "sample_id": "A12",
         "name": "Backup tissue sample",
-        "location": "Freezer B",
+        "location": "Backup Freezer",
         "storage_temperature": "-60C",
         "max_room_temp_minutes": 20,
         "room_temp_started_at": None,
@@ -39,8 +39,12 @@ SAMPLES = [
 ]
 
 EQUIPMENT = [
-    {"id": "freezer_b", "name": "Freezer B", "kind": "freezer", "current_temperature": "-60C",
-     "status": "ok", "source_type": "observed_by_sensor", "confidence": "high", "updated_at": now_iso()},
+    {"id": "freezer", "name": "Freezer", "kind": "ultra_low_freezer", "current_temperature": "-60C",
+     "status": "ok", "normal_range": {"min": -80, "max": -50, "unit": "C"},
+     "source_type": "observed_by_sensor", "confidence": "high", "updated_at": now_iso()},
+    {"id": "backup_freezer", "name": "Backup Freezer", "kind": "ultra_low_freezer", "current_temperature": "-81C",
+     "status": "ok", "normal_range": {"min": -90, "max": -70, "unit": "C"},
+     "source_type": "observed_by_sensor", "confidence": "high", "updated_at": now_iso()},
     {"id": "bench_2", "name": "Bench 2", "kind": "bench", "current_temperature": "21C",
      "status": "ok", "source_type": "observed_by_sensor", "confidence": "high", "updated_at": now_iso()},
     {"id": "centrifuge_2", "name": "Centrifuge 2", "kind": "centrifuge", "current_temperature": None,
@@ -77,6 +81,10 @@ def seed() -> None:
     storage.save("reminders", [])
     storage.save("events", [])
     storage.save("messages", [])
+    # Reset the incident/ticket logs so demos start clean. prior_events.json is left
+    # intact on disk — it's the long-term history the agent recalls.
+    storage.save("incidents", [])
+    storage.save("tickets", [])
     print("Seeded labops_api/data/ with the cardio-tissue demo scenario.")
 
 

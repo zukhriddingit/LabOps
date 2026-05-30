@@ -11,7 +11,7 @@ flows:
       - collect: to_location
         description: Where the sample is being placed, e.g. "Bench 2".
       - collect: from_location
-        description: Where the sample is coming from, e.g. "Freezer B". Ask only if unclear.
+        description: Where the sample is coming from, e.g. "Freezer". Ask only if unclear.
         ask_before_filling: false
       - collect: allowed_room_temp_minutes
         description: How many minutes the sample may stay at room temperature, e.g. 20.

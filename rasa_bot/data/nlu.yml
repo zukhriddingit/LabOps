@@ -1,0 +1,165 @@
+version: "3.1"
+
+nlu:
+  - intent: greet
+    examples: |
+      - hello
+      - hi Guardian
+      - Guardian
+      - hey labops
+      - are you online
+
+  - intent: goodbye
+    examples: |
+      - goodbye
+      - bye
+      - stop for now
+      - thanks Guardian
+      - that is all
+
+  - intent: move_sample
+    examples: |
+      - Guardian, I'm taking Cardio Sample [C17](sample_id) out of [minus 60](temperature) and putting it on [Bench 2](to_location). It can stay at room temp for [20](duration_minutes) minutes
+      - move Sample [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location)
+      - I moved [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location)
+      - taking sample [A12](sample_id) out of [minus 80](temperature) and putting it on [Bench 1](to_location) for [15](duration_minutes) minutes
+      - log sample [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location), room temp limit [20](duration_minutes) minutes
+      - [C17](sample_id) is now on [Bench 2](to_location)
+      - put Cardio Sample [C17](sample_id) on [Bench 2](to_location) from [minus 60](temperature), limit [20 minutes](duration_minutes)
+      - I am moving [C17](sample_id) from [Storage Shelf A](from_location) to [Centrifuge 2](to_location)
+
+  - intent: validate_lab_calculation
+    examples: |
+      - I calculated [20](user_answer_ul) microliters for [0.02](target_percent) percent in [100](final_volume_ml) mL. Is that correct?
+      - is [20 uL](user_answer_ul) right for [0.02 percent](target_percent) in [100 mL](final_volume_ml)
+      - check my v/v calculation: [0.02](target_percent) percent in [100](final_volume_ml) mL equals [20](user_answer_ul) microliters
+      - validate [20](user_answer_ul) microliters for [0.02](target_percent) percent final concentration in [100](final_volume_ml) mL
+      - I got [50](user_answer_ul) uL for [0.05](target_percent) percent in [100](final_volume_ml) mL
+      - for [percent volume volume](calculation_type), is [10](user_answer_ul) uL correct for [0.01](target_percent) percent in [100](final_volume_ml) mL
+      - calculation check [0.02](target_percent) percent [100](final_volume_ml) ml answer [20](user_answer_ul) microliters
+
+  - intent: find_inventory
+    examples: |
+      - Where are the [15 mL tubes](item_name)?
+      - find [15 mL tubes](item_name)
+      - locate [serological pipettes](item_name)
+      - where is [PBS](item_name)
+      - do we have [ethanol wipes](item_name)
+      - inventory lookup for [15 mL tubes](item_name)
+      - what shelf has [conical tubes](item_name)
+
+  - intent: retrieve_sop
+    examples: |
+      - What [centrifuge setup](sop_query) applies for this sample?
+      - retrieve the [centrifuge setup](sop_query) for sample [C17](sample_id)
+      - what SOP applies to [C17](sample_id)
+      - show the [freezer sample storage](sop_query) SOP
+      - I need the [Cardiovascular Tissue Prep](sop_query) protocol
+      - what setup applies for [Centrifuge 2](equipment_name)
+      - based on the local SOP, what should I do for [centrifuge setup](sop_query)
+
+  - intent: draft_emergency_message
+    examples: |
+      - My gloves are contaminated. Message the [postdoc](recipient_role)
+      - message the [postdoc](recipient_role), my gloves are contaminated
+      - draft an emergency message to the [PI](recipient_role)
+      - tell the [postdoc](recipient_role) I need help before the sample limit
+      - alert the [postdoc](recipient_role)
+      - I need help. Message the [lab manager](recipient_role)
+      - emergency, contact the [postdoc](recipient_role)
+
+  - intent: confirm_emergency_message
+    examples: |
+      - yes
+      - yes send it
+      - confirm send
+      - send it
+      - send the message
+      - confirmed
+      - go ahead
+      - yes, message the postdoc
+
+  - intent: cancel_emergency_message
+    examples: |
+      - cancel
+      - do not send it
+      - don't send
+      - never mind
+      - cancel the message
+      - stop emergency message
+      - no, do not send
+
+  - intent: generate_handoff
+    examples: |
+      - Give the [night](shift) shift handoff
+      - generate the [night shift](shift) handoff
+      - shift handoff
+      - handoff for [day](shift) shift
+      - what should I tell the [night](shift) team
+      - prepare handoff for [today](date)
+      - summarize the lab for handoff
+
+  - intent: get_lab_state
+    examples: |
+      - what's the current lab state
+      - show current state
+      - what is true right now
+      - list active timers
+      - where is sample [C17](sample_id)
+      - tell me where is [C17](sample_id)
+      - where is [C17](sample_id)
+      - where did [C17](sample_id) go
+      - what is the location of [C17](sample_id)
+      - latest location for sample [C17](sample_id)
+      - current location of [C17](sample_id)
+      - tell me the status of [C17](sample_id)
+      - what happened to sample [C17](sample_id)
+      - what is the latest status
+      - status check
+
+  - intent: log_daily_activity
+    examples: |
+      - Log that [Alex](person_name) prepared Sample [C17](sample_id) today
+      - [Alex](person_name) prepared [C17](sample_id) today
+      - record that [Priya](person_name) checked the centrifuge SOP
+      - log [Mina](person_name) moved Sample [C17](sample_id)
+      - add activity for [Alex](person_name): prepared Sample [C17](sample_id)
+      - note that [Jordan](person_name) restocked 15 mL tubes
+
+  - intent: get_person_daily_activity
+    examples: |
+      - What did [Alex](person_name) work on today?
+      - show [Alex](person_name)'s activity
+      - what has [Priya](person_name) done today
+      - daily activity for [Mina](person_name)
+      - summarize [Jordan](person_name)'s work today
+      - what did [Alex](person_name) do
+
+  - intent: create_reminder
+    examples: |
+      - remind me in [18](duration_minutes) minutes
+      - create a reminder for Sample [C17](sample_id) in [20](duration_minutes) minutes
+      - set a timer for [10 minutes](duration_minutes)
+      - remind me to check [C17](sample_id) in [18](duration_minutes) minutes
+      - create a lab reminder in [5](duration_minutes) minutes
+
+  - intent: fallback
+    examples: |
+      - this does not make sense
+      - something else
+      - unknown command
+
+  - regex: sample_id
+    examples: |
+      - [A-Z]{1,4}\d{1,4}
+
+  - regex: temperature
+    examples: |
+      - minus \d+
+      - -\d+\s?C
+
+  - synonym: percent_volume_volume
+    examples: |
+      - v/v
+      - volume volume
+      - percent volume volume

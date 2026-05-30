@@ -18,10 +18,14 @@ COLLECTIONS = [
     "samples",
     "equipment",
     "inventory",
+    "incidents",
+    "tickets",
+    "prior_events",
     "reminders",
     "events",
     "messages",
     "experiment_runs",
+    "activity_events",
 ]
 
 

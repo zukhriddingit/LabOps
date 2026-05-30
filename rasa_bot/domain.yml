@@ -1,0 +1,184 @@
+version: "3.1"
+
+intents:
+  - move_sample
+  - validate_lab_calculation
+  - find_inventory
+  - retrieve_sop
+  - draft_emergency_message
+  - confirm_emergency_message
+  - cancel_emergency_message
+  - generate_handoff
+  - get_lab_state
+  - log_daily_activity
+  - get_person_daily_activity
+  - create_reminder
+  - recall_history
+  - get_open_incidents
+  - create_maintenance_ticket
+  - greet
+  - goodbye
+  - fallback
+  - nlu_fallback
+
+entities:
+  - sample_id
+  - person_name
+  - from_location
+  - to_location
+  - temperature
+  - duration_minutes
+  - item_name
+  - equipment_name
+  - equipment_id
+  - issue_type
+  - incident_id
+  - sop_query
+  - calculation_type
+  - target_percent
+  - final_volume_ml
+  - user_answer_ul
+  - recipient_role
+  - message_text
+  - shift
+  - date
+
+slots:
+  sample_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: sample_id
+  person_name:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: person_name
+  from_location:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: from_location
+  to_location:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: to_location
+  temperature:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: temperature
+  duration_minutes:
+    type: float
+    mappings:
+      - type: from_entity
+        entity: duration_minutes
+  item_name:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: item_name
+  equipment_name:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: equipment_name
+  equipment_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: equipment_id
+  issue_type:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: issue_type
+  incident_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: incident_id
+  sop_query:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: sop_query
+  calculation_type:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: calculation_type
+  target_percent:
+    type: float
+    mappings:
+      - type: from_entity
+        entity: target_percent
+  final_volume_ml:
+    type: float
+    mappings:
+      - type: from_entity
+        entity: final_volume_ml
+  user_answer_ul:
+    type: float
+    mappings:
+      - type: from_entity
+        entity: user_answer_ul
+  recipient_role:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: recipient_role
+  emergency_message:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  emergency_message_pending:
+    type: bool
+    influence_conversation: true
+    mappings:
+      - type: custom
+  shift:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: shift
+  date:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: date
+
+responses:
+  utter_greet:
+    - text: "LabOps Guardian online. I can track samples, check calculations, retrieve SOP-grounded guidance, find inventory, check open incidents, recall equipment history, and draft confirmed messages."
+  utter_goodbye:
+    - text: "Standing by. I will keep using the database for current lab state and local knowledge for SOP answers."
+  utter_fallback:
+    - text: "I did not catch that clearly. Please rephrase, or give me the sample, item, SOP, calculation, reminder, incident, or handoff details."
+
+actions:
+  - action_move_sample
+  - action_validate_lab_calculation
+  - action_find_inventory
+  - action_retrieve_lab_sop
+  - action_draft_emergency_message
+  - action_send_emergency_message
+  - action_cancel_emergency_message
+  - action_generate_lab_handoff
+  - action_get_lab_state
+  - action_log_daily_activity
+  - action_get_person_daily_activity
+  - action_create_lab_reminder
+  - action_recall_history
+  - action_get_open_incidents
+  - action_create_maintenance_ticket
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

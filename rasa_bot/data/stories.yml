@@ -1,0 +1,54 @@
+version: "3.1"
+
+stories:
+  - story: Main LabOps demo path
+    steps:
+      - intent: move_sample
+        entities:
+          - sample_id: C17
+          - temperature: minus 60
+          - to_location: Bench 2
+          - duration_minutes: 20
+      - action: action_move_sample
+      - intent: validate_lab_calculation
+        entities:
+          - user_answer_ul: 20
+          - target_percent: 0.02
+          - final_volume_ml: 100
+      - action: action_validate_lab_calculation
+      - intent: find_inventory
+        entities:
+          - item_name: 15 mL tubes
+      - action: action_find_inventory
+      - intent: retrieve_sop
+        entities:
+          - sop_query: centrifuge setup
+      - action: action_retrieve_lab_sop
+      - intent: draft_emergency_message
+        entities:
+          - recipient_role: postdoc
+      - action: action_draft_emergency_message
+      - intent: confirm_emergency_message
+      - action: action_send_emergency_message
+      - intent: log_daily_activity
+        entities:
+          - person_name: Alex
+          - sample_id: C17
+      - action: action_log_daily_activity
+      - intent: get_person_daily_activity
+        entities:
+          - person_name: Alex
+      - action: action_get_person_daily_activity
+      - intent: generate_handoff
+        entities:
+          - shift: night
+      - action: action_generate_lab_handoff
+
+  - story: Emergency cancellation
+    steps:
+      - intent: draft_emergency_message
+        entities:
+          - recipient_role: postdoc
+      - action: action_draft_emergency_message
+      - intent: cancel_emergency_message
+      - action: action_cancel_emergency_message
