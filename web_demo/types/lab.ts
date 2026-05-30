@@ -48,6 +48,14 @@ export type ConnectionStatus = "checking" | "connected" | "disconnected";
 
 export type MessageStatus = "none" | "draft" | "sent";
 
+export type LabViewPreset =
+  | "entry"
+  | "cold"
+  | "bench"
+  | "inventory"
+  | "message"
+  | "overview";
+
 export interface TranscriptLine {
   who: "human" | "agent";
   text: string;

@@ -70,6 +70,63 @@ body {
   margin-top: 8px;
 }
 
+.camera-controls {
+  position: absolute;
+  left: 24px;
+  bottom: 86px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9;
+  max-width: calc(100vw - 48px);
+}
+.tour-btn,
+.preset-btn {
+  border: 1px solid rgba(130, 153, 192, 0.34);
+  background: rgba(12, 18, 33, 0.82);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+.tour-btn {
+  border-color: rgba(54, 209, 166, 0.65);
+  background: var(--ok);
+  color: #03110c;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.tour-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.preset-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.preset-row::-webkit-scrollbar {
+  display: none;
+}
+.preset-btn {
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.preset-btn:hover,
+.preset-btn.active {
+  border-color: var(--info);
+  color: var(--info);
+  background: rgba(74, 168, 255, 0.13);
+}
+
 /* ───────────────────────── floating pins ───────────────────────── */
 .pin {
   display: flex;
@@ -328,16 +385,19 @@ body {
   top: 0;
   right: 0;
   height: 100%;
-  width: 390px;
+  width: min(430px, 100vw);
   background: rgba(12, 18, 33, 0.97);
   border-left: 1px solid var(--line);
   backdrop-filter: blur(12px);
   transform: translateX(100%);
   transition: transform 0.28s ease;
-  z-index: 8;
+  z-index: 80;
   display: flex;
   flex-direction: column;
   box-shadow: -24px 0 64px rgba(0, 0, 0, 0.5);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .dashboard.open {
   transform: translateX(0);
@@ -348,6 +408,12 @@ body {
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(12, 18, 33, 0.98);
+  backdrop-filter: blur(12px);
 }
 .dashboard-head h2 {
   margin: 0;
@@ -355,11 +421,13 @@ body {
 }
 .dashboard-body {
   padding: 14px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: 90px;
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  padding-bottom: 32px;
 }
 
 /* ───────────────────────── shared panels / widgets ───────────────────────── */
@@ -502,8 +570,8 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
-  max-height: 30vh;
-  overflow-y: auto;
+  min-height: 260px;
+  overflow: visible;
 }
 .transcript-head {
   display: flex;

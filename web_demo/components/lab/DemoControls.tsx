@@ -12,6 +12,8 @@ export default function DemoControls() {
     findTubes,
     draftMessage,
     moveToBackupFreezer,
+    runDemo,
+    demoRunning,
     reset,
   } = useLabStore();
 
@@ -19,6 +21,9 @@ export default function DemoControls() {
 
   return (
     <Panel title="Demo Controls" className="controls">
+      <button className="btn primary" onClick={runDemo} disabled={demoRunning}>
+        {demoRunning ? "Running scripted demo..." : "Run guided demo"}
+      </button>
       <button className="btn primary" onClick={moveToBench} disabled={onBench}>
         Move C17 to Bench
       </button>

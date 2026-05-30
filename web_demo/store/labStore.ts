@@ -16,6 +16,7 @@ import type {
   MessageStatus,
   Sample,
   SampleStatus,
+  LabViewPreset,
   TranscriptLine,
 } from "@/types/lab";
 
@@ -31,6 +32,8 @@ const TRANSCRIPT: TranscriptLine[] = [
 const EMERGENCY_TEXT =
   "Sample C17 is near/exceeding the room-temp limit on Bench 2. Assistance needed.";
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface LabState {
   sample: Sample;
   inventory: InventoryObservation | null;
@@ -44,8 +47,12 @@ interface LabState {
   // UI
   selectedPinId: string | null;
   dashboardOpen: boolean;
+  viewPreset: LabViewPreset;
+  viewPresetTick: number;
+  demoRunning: boolean;
   setSelectedPin: (id: string | null) => void;
   toggleDashboard: (force?: boolean) => void;
+  setViewPreset: (preset: LabViewPreset) => void;
 
   // lifecycle
   pollState: () => Promise<void>;
@@ -58,6 +65,7 @@ interface LabState {
   triggerCritical: () => void;
   findTubes: () => Promise<void>;
   draftMessage: () => Promise<void>;
+  runDemo: () => Promise<void>;
   advanceTranscript: () => void;
   reset: () => void;
 }
@@ -74,9 +82,14 @@ export const useLabStore = create<LabState>((set, get) => ({
 
   selectedPinId: null,
   dashboardOpen: false,
+  viewPreset: "entry",
+  viewPresetTick: 0,
+  demoRunning: false,
   setSelectedPin: (id) => set({ selectedPinId: id }),
   toggleDashboard: (force) =>
     set((s) => ({ dashboardOpen: force ?? !s.dashboardOpen })),
+  setViewPreset: (preset) =>
+    set((s) => ({ viewPreset: preset, viewPresetTick: s.viewPresetTick + 1 })),
 
   pollState: async () => {
     try {
@@ -194,6 +207,50 @@ export const useLabStore = create<LabState>((set, get) => ({
     }
   },
 
+  runDemo: async () => {
+    if (get().demoRunning) return;
+
+    set((s) => ({
+      demoRunning: true,
+      dashboardOpen: true,
+      viewPreset: "entry",
+      viewPresetTick: s.viewPresetTick + 1,
+    }));
+    get().reset();
+    set((s) => ({
+      demoRunning: true,
+      dashboardOpen: true,
+      viewPreset: "cold",
+      viewPresetTick: s.viewPresetTick + 1,
+    }));
+    await wait(900);
+
+    await get().moveToBench();
+    set((s) => ({ viewPreset: "bench", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 2, selectedPinId: "sample" }));
+    await wait(1900);
+
+    get().triggerWarning();
+    set({ transcriptShown: 2, selectedPinId: "sample" });
+    await wait(1200);
+
+    set((s) => ({ viewPreset: "inventory", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 3, selectedPinId: "shelf_a" }));
+    await wait(900);
+    await get().findTubes();
+    set({ transcriptShown: 4, selectedPinId: "shelf_a" });
+    await wait(1600);
+
+    get().triggerCritical();
+    set((s) => ({ viewPreset: "message", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 5, selectedPinId: "pi_postdoc" }));
+    await wait(900);
+    await get().draftMessage();
+    set({ transcriptShown: 6, selectedPinId: "pi_postdoc" });
+    await wait(1600);
+
+    set((s) => ({ viewPreset: "cold", viewPresetTick: s.viewPresetTick + 1, selectedPinId: "sample" }));
+    await get().moveToBackupFreezer();
+    set({ demoRunning: false, transcriptShown: 6, selectedPinId: "sample" });
+  },
+
   advanceTranscript: () =>
     set((s) => ({
       transcriptShown: Math.min(s.transcript.length, s.transcriptShown + 1),
@@ -208,5 +265,8 @@ export const useLabStore = create<LabState>((set, get) => ({
       messageDraft: null,
       transcriptShown: 2,
       selectedPinId: null,
+      viewPreset: "entry",
+      viewPresetTick: 0,
+      demoRunning: false,
     }),
 }));

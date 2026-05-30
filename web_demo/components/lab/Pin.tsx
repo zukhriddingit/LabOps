@@ -19,7 +19,7 @@ export default function Pin({
   onClick: () => void;
 }) {
   return (
-    <Html position={position} center zIndexRange={[20, 0]} className="pin-html">
+    <Html position={position} center zIndexRange={[12, 0]} className="pin-html">
       <button
         className={`pin tone-${tone} ${active ? "active" : ""} ${pulse ? "pulse" : ""}`}
         onClick={(e) => {

@@ -37,7 +37,15 @@ export async function moveSample(sampleId: string, payload: MovePayload) {
 export async function postEvent(event: InventoryObservationEvent) {
   return req("/api/events", {
     method: "POST",
-    body: JSON.stringify(event),
+    body: JSON.stringify({
+      type: event.event_type,
+      source_type: "camera_inferred",
+      confidence: event.confidence,
+      payload: {
+        ...event,
+        original_source_type: event.source_type,
+      },
+    }),
   });
 }
 

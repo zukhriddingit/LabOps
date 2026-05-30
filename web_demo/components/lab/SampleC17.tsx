@@ -18,7 +18,7 @@ const LOCATION_POS: Record<SampleLocation, THREE.Vector3> = {
 const STATUS_COLOR: Record<SampleStatus, string> = {
   stored: "#4aa8ff",
   stabilized: "#36d1a6",
-  tracking: "#36d1a6",
+  tracking: "#ffb020",
   warning: "#ffb020",
   critical: "#ff3b5c",
 };
@@ -29,7 +29,7 @@ export default function SampleC17() {
   const ring = useRef<THREE.Mesh>(null!);
 
   const target = LOCATION_POS[sample.location];
-  const color = STATUS_COLOR[sample.status];
+  const color = getSampleColor(sample.status, sample.location, sample.elapsedDemoSeconds);
   const pulsing = sample.status === "warning" || sample.status === "critical";
 
   useFrame((_, dt) => {
@@ -54,12 +54,32 @@ export default function SampleC17() {
       {/* glass tube */}
       <mesh castShadow>
         <cylinderGeometry args={[0.17, 0.15, 0.62, 24]} />
-        <meshStandardMaterial color="#cfe6ff" metalness={0.1} roughness={0.05} transparent opacity={0.35} />
+        <meshPhysicalMaterial
+          color="#e7f5ff"
+          metalness={0}
+          roughness={0.02}
+          transmission={0.38}
+          thickness={0.16}
+          transparent
+          opacity={0.5}
+          clearcoat={1}
+          clearcoatRoughness={0.06}
+        />
       </mesh>
       {/* conical tube bottom */}
       <mesh position={[0, -0.36, 0]}>
         <coneGeometry args={[0.15, 0.16, 24]} />
-        <meshStandardMaterial color="#cfe6ff" metalness={0.1} roughness={0.05} transparent opacity={0.35} />
+        <meshPhysicalMaterial
+          color="#e7f5ff"
+          metalness={0}
+          roughness={0.02}
+          transmission={0.36}
+          thickness={0.14}
+          transparent
+          opacity={0.48}
+          clearcoat={1}
+          clearcoatRoughness={0.06}
+        />
       </mesh>
       {/* liquid (status colour) */}
       <mesh position={[0, -0.12, 0]}>
@@ -91,4 +111,15 @@ export default function SampleC17() {
       )}
     </group>
   );
+}
+
+function getSampleColor(status: SampleStatus, location: SampleLocation, elapsedDemoSeconds: number) {
+  if (location === "Bench 2") {
+    const t = Math.min(1, Math.max(0, elapsedDemoSeconds / DEMO.limitSeconds));
+    const amber = new THREE.Color("#ffb020");
+    const red = new THREE.Color("#ff3b5c");
+    return `#${amber.lerp(red, t).getHexString()}`;
+  }
+
+  return STATUS_COLOR[status];
 }
