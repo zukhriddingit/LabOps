@@ -12,7 +12,13 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+_root = Path(__file__).parent.parent
+load_dotenv(_root / ".env")          # local overrides (gitignored)
+load_dotenv(_root / ".env.example", override=False)  # fallback for fresh clones
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware

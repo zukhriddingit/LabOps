@@ -3,7 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from pathlib import Path
 from typing import Any, Dict
+
+from dotenv import load_dotenv
+_root = Path(__file__).parent.parent
+load_dotenv(_root / ".env")
+load_dotenv(_root / ".env.example", override=False)
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
