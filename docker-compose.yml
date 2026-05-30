@@ -10,6 +10,8 @@ services:
     volumes:
       # Bind-mount: hot-reload on code changes + JSON data persists on host
       - ./labops_api:/app/labops_api
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
 
