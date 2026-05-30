@@ -792,3 +792,8 @@ body {
   border-color: var(--ok);
   color: var(--ok);
 }
+.voice-status {
+  font-size: 12px;
+  color: var(--warn);
+  line-height: 1.4;
+}

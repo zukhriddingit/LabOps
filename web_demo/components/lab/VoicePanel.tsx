@@ -23,6 +23,7 @@ export default function VoicePanel() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState(false);
   const [typed, setTyped] = useState("");
+  const [status, setStatus] = useState("");
   const recRef = useRef<Recognizer | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
 
@@ -47,24 +48,46 @@ export default function VoicePanel() {
   function startListening() {
     cancelSpeak();
     setSpeaking(false);
+    let gotResult = false;
     const rec = createRecognizer({
-      onPartial: (t) => setPartial(t),
+      onPartial: (t) => {
+        gotResult = true;
+        setPartial(t);
+      },
       onFinal: (t) => {
+        gotResult = true;
         recRef.current = null;
         setListening(false);
+        setStatus("");
         handle(t);
       },
       onEnd: () => {
         setListening(false);
         setPartial("");
+        setStatus((s) => (gotResult ? "" : s || "Didn't catch that — tap and speak again."));
       },
-      onError: () => {
+      onError: (err) => {
         setListening(false);
         setPartial("");
+        setStatus(
+          err === "not-allowed" || err === "service-not-allowed"
+            ? "Microphone blocked. Allow mic access in the browser address bar, then tap again."
+            : err === "no-speech"
+              ? "Didn't catch that — tap and speak again."
+              : err === "audio-capture"
+                ? "No microphone found."
+                : err === "aborted"
+                  ? ""
+                  : `Voice error: ${err}`
+        );
       },
     });
-    if (!rec) return;
+    if (!rec) {
+      setStatus("Voice input isn't available in this browser — type instead.");
+      return;
+    }
     recRef.current = rec;
+    setStatus("Listening… speak now.");
     setListening(true);
     rec.start();
   }
@@ -73,6 +96,7 @@ export default function VoicePanel() {
     recRef.current?.stop();
     recRef.current = null;
     setListening(false);
+    setStatus("");
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -153,6 +177,7 @@ export default function VoicePanel() {
             Send
           </button>
         </form>
+        {status && <div className="voice-status">{status}</div>}
       </div>
     </div>
   );

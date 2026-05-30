@@ -372,6 +372,8 @@ function KeyboardWalkControls({ controlsRef }: { controlsRef: MutableRefObject<a
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // Don't hijack keys while the user is typing in a field.
+      if (isTypingTarget(event.target)) return;
       if (isWalkKey(event.code)) {
         event.preventDefault();
         pressed.current.add(event.code);
@@ -420,6 +422,13 @@ function KeyboardWalkControls({ controlsRef }: { controlsRef: MutableRefObject<a
   });
 
   return null;
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || !el.tagName) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
 }
 
 function isWalkKey(code: string) {
