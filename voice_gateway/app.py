@@ -59,7 +59,9 @@ def env(name: str, default: str = "") -> str:
 def health() -> Dict[str, Any]:
     return {
         "ok": True,
+        "tts_provider": env("TTS_PROVIDER", "speechmatics").lower(),
         "speechmatics_configured": bool(env("SPEECHMATICS_API_KEY")),
+        "speechmatics_tts_configured": bool(env("SPEECHMATICS_TTS_API_KEY") or env("SPEECHMATICS_API_KEY")),
         "rime_configured": bool(env("RIME_API_KEY")),
     }
 
@@ -130,6 +132,42 @@ async def transcribe(audio: UploadFile = File(...)) -> Dict[str, Any]:
 
 @app.post("/api/tts")
 async def tts(request: TTSRequest) -> Response:
+    """Text-to-speech. Provider chosen by TTS_PROVIDER (default: speechmatics; 'rime' falls back to Rime)."""
+    provider = env("TTS_PROVIDER", "speechmatics").lower()
+    if provider == "rime":
+        return await _tts_rime(request)
+    return await _tts_speechmatics(request)
+
+
+async def _tts_speechmatics(request: TTSRequest) -> Response:
+    # Speechmatics TTS uses the same account key as ASR (override with SPEECHMATICS_TTS_API_KEY).
+    api_key = env("SPEECHMATICS_TTS_API_KEY") or env("SPEECHMATICS_API_KEY")
+    base_url = env("SPEECHMATICS_TTS_URL", "https://preview.tts.speechmatics.com/generate").rstrip("/")
+    voice = env("SPEECHMATICS_TTS_VOICE", "sarah")  # sarah/theo (UK) · megan/jack (US)
+
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Speechmatics TTS not configured (set SPEECHMATICS_API_KEY).")
+
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(f"{base_url}/{voice}", headers=headers, json={"text": request.text})
+            if not response.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Speechmatics TTS failed: {response.status_code} — {response.text[:200]}",
+                )
+            return Response(
+                content=response.content,
+                media_type=response.headers.get("content-type", "audio/wav"),
+            )
+    except HTTPException:
+        raise
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot reach Speechmatics TTS: {exc}")
+
+
+async def _tts_rime(request: TTSRequest) -> Response:
     api_key = env("RIME_API_KEY")
     api_url = env("RIME_API_URL", "https://users.rime.ai/v1/rime-tts")
 

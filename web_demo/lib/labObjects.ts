@@ -1,7 +1,7 @@
 // Static layout + metadata for every object in the lab. The 3D scene, the floating pins,
 // and the info cards all read from this so they stay in sync.
 
-import type { SampleLocation } from "@/types/lab";
+import type { SampleLocation, SampleStatus } from "@/types/lab";
 
 export type Tone = "default" | "ok" | "info" | "warn" | "crit";
 export type Vec3 = [number, number, number];
@@ -12,6 +12,26 @@ export const TONE_HEX: Record<Tone, string> = {
   info: "#4aa8ff",
   warn: "#ffb020",
   crit: "#ff3b5c",
+};
+
+// Single source of truth for sample status → tone/colour. Both the floating pin
+// and the vial liquid read from here so they never disagree. (`tracking` is the
+// safe in-window state → ok/teal; once on the bench the C17 vial separately ramps
+// amber→red by elapsed time, which carries the urgency cue.)
+export const SAMPLE_STATUS_TONE: Record<SampleStatus, Tone> = {
+  stored: "info",
+  tracking: "ok",
+  stabilized: "ok",
+  warning: "warn",
+  critical: "crit",
+};
+
+export const SAMPLE_STATUS_HEX: Record<SampleStatus, string> = {
+  stored: TONE_HEX.info,
+  tracking: TONE_HEX.ok,
+  stabilized: TONE_HEX.ok,
+  warning: TONE_HEX.warn,
+  critical: TONE_HEX.crit,
 };
 
 export interface LabObject {
@@ -212,3 +232,9 @@ export const LAB_OBJECTS: LabObject[] = [
     description: "Escalation contact. Draft an emergency message here when hands are contaminated.",
   },
 ];
+
+// id → centre position, so glows/effects can be anchored to objects instead of
+// hardcoded coordinates that silently drift when an object is moved.
+export const OBJECT_POS: Record<string, Vec3> = Object.fromEntries(
+  LAB_OBJECTS.map((o) => [o.id, o.position])
+) as Record<string, Vec3>;

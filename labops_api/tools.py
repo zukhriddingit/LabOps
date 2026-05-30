@@ -345,57 +345,123 @@ def _shift_handoff(shift: str | None) -> dict[str, Any]:
 
 # ── Calculation validation ────────────────────────────────────────────────────
 
+def _close(a: float, b: float) -> bool:
+    return abs(a - b) <= max(0.01 * abs(b), 0.001)
+
+
 def validate_calculation(
     calculation_type: str,
     target_percent: float | None,
     final_volume_ml: float | None,
-    user_answer_ul: float | None,
+    user_answer_ul: float | None = None,
+    stock_percent: float | None = None,
+    user_answer_g: float | None = None,
 ) -> dict[str, Any]:
-    if calculation_type == "percent_volume_volume":
-        if target_percent is None or final_volume_ml is None:
+    """Validate a reagent calculation. Supports three bases:
+      - percent_volume_volume (v/v): X% v/v → microliters of neat reagent
+      - percent_weight_volume (w/v): X% w/v → grams of solid (X g per 100 mL)
+      - stock_dilution (C1V1=C2V2): dilute a stock_percent stock to target_percent
+    """
+    ct = (calculation_type or "percent_volume_volume").lower()
+    ct = ct.replace("/", "_").replace("-", "_").replace(" ", "_")
+
+    # ── Stock dilution (C1·V1 = C2·V2). Triggered by an explicit type OR a stock_percent. ──
+    if stock_percent is not None or ct in ("stock_dilution", "dilution", "c1v1", "c1v1c2v2"):
+        if target_percent is None or final_volume_ml is None or not stock_percent:
             return {
-                "status": "ambiguous",
-                "formula": None,
-                "assumptions": [],
-                "warning": "I need both the target percent and the final volume to check this.",
-                "source_type": "calculated",
-                "confidence": "low",
+                "status": "ambiguous", "formula": None, "assumptions": [],
+                "warning": "For a stock dilution I need the stock %, the target %, and the final volume.",
+                "source_type": "calculated", "confidence": "low",
             }
-        expected_ml = (target_percent / 100.0) * final_volume_ml
-        expected_ul = round(expected_ml * 1000.0, 4)
-        formula = (
-            f"{target_percent} / 100 * {final_volume_ml} mL = "
-            f"{expected_ml:g} mL = {expected_ul:g} uL"
-        )
-        assumptions = ["percent is v/v", f"{final_volume_ml:g} mL is the final volume"]
-        warning = "If this is w/v or a stock dilution, I need the stock concentration first."
-
-        if user_answer_ul is None:
-            status = "ambiguous"
-        elif abs(user_answer_ul - expected_ul) <= max(0.01 * expected_ul, 0.001):
-            status = "correct"
-        else:
-            status = "incorrect"
-
+        v1_ml = (target_percent * final_volume_ml) / stock_percent
+        expected_ul = round(v1_ml * 1000.0, 4)
+        status = "ambiguous" if user_answer_ul is None else ("correct" if _close(user_answer_ul, expected_ul) else "incorrect")
         return {
             "status": status,
             "expected_ul": expected_ul,
             "user_answer_ul": user_answer_ul,
-            "formula": formula,
-            "assumptions": assumptions,
-            "warning": warning,
-            "source_type": "calculated",
-            "confidence": "high",
+            "formula": f"C1·V1 = C2·V2  →  V1 = {target_percent}% × {final_volume_ml:g} mL / {stock_percent}% = {v1_ml:g} mL = {expected_ul:g} uL of stock",
+            "assumptions": [
+                f"diluting a {stock_percent}% stock down to {target_percent}%",
+                f"final volume is {final_volume_ml:g} mL",
+                "stock % and target % share the same basis (both v/v or both w/v)",
+            ],
+            "warning": "Add the stock, then top up (q.s.) to the final volume with diluent.",
+            "source_type": "calculated", "confidence": "high",
+        }
+
+    # ── Weight / volume (X% w/v = X g per 100 mL). ──
+    if ct in ("percent_weight_volume", "w_v", "wv", "weight_volume", "mass_volume", "weight_per_volume"):
+        if target_percent is None or final_volume_ml is None:
+            return {
+                "status": "ambiguous", "formula": None, "assumptions": [],
+                "warning": "I need the target percent and the final volume for a w/v calculation.",
+                "source_type": "calculated", "confidence": "low",
+            }
+        expected_g = round((target_percent / 100.0) * final_volume_ml, 6)
+        expected_mg = round(expected_g * 1000.0, 4)
+        status = "ambiguous" if user_answer_g is None else ("correct" if _close(user_answer_g, expected_g) else "incorrect")
+        return {
+            "status": status,
+            "expected_g": expected_g,
+            "expected_mg": expected_mg,
+            "user_answer_g": user_answer_g,
+            "formula": f"{target_percent}% w/v = {target_percent} g / 100 mL  →  {expected_g:g} g ({expected_mg:g} mg) in {final_volume_ml:g} mL",
+            "assumptions": [
+                "percent is w/v (grams of solute per 100 mL)",
+                f"final volume is {final_volume_ml:g} mL",
+            ],
+            "warning": "Dissolve the solid first, then bring to final volume (q.s.) — don't add solid to the full volume.",
+            "source_type": "calculated", "confidence": "high",
+        }
+
+    # ── Volume / volume (default). ──
+    if ct in ("percent_volume_volume", "v_v", "vv", "volume_volume", "percent_v_v", "volume_per_volume"):
+        if target_percent is None or final_volume_ml is None:
+            return {
+                "status": "ambiguous", "formula": None, "assumptions": [],
+                "warning": "I need both the target percent and the final volume to check this.",
+                "source_type": "calculated", "confidence": "low",
+            }
+        expected_ml = (target_percent / 100.0) * final_volume_ml
+        expected_ul = round(expected_ml * 1000.0, 4)
+        status = "ambiguous" if user_answer_ul is None else ("correct" if _close(user_answer_ul, expected_ul) else "incorrect")
+        return {
+            "status": status,
+            "expected_ul": expected_ul,
+            "user_answer_ul": user_answer_ul,
+            "formula": f"{target_percent} / 100 * {final_volume_ml} mL = {expected_ml:g} mL = {expected_ul:g} uL",
+            "assumptions": ["percent is v/v", f"{final_volume_ml:g} mL is the final volume"],
+            "warning": "If you're diluting from a stock, give me the stock concentration and I'll use C1V1=C2V2.",
+            "source_type": "calculated", "confidence": "high",
         }
 
     return {
-        "status": "ambiguous",
-        "formula": None,
-        "assumptions": [],
-        "warning": f"Calculation type '{calculation_type}' is not supported yet.",
-        "source_type": "calculated",
-        "confidence": "low",
+        "status": "ambiguous", "formula": None, "assumptions": [],
+        "warning": f"Calculation type '{calculation_type}' is not supported. I handle v/v, w/v, and stock dilutions.",
+        "source_type": "calculated", "confidence": "low",
     }
+
+
+# ── Emergency / escalation messaging ──────────────────────────────────────────
+
+def send_emergency_message(recipient_role: str, message: str, confirmed: bool = False) -> dict[str, Any]:
+    """Draft (confirmed=False) or send (confirmed=True) an escalation message. The record's
+    truth state reflects the gate: a draft is pending_confirmation, a sent message is human_confirmed.
+    Shape matches POST /api/tools/send_emergency_message so the agent and the UI produce identical records.
+    """
+    messages = storage.load("messages")
+    record = {
+        "id": storage.next_id("msg", messages),
+        "recipient_role": recipient_role,
+        "message": message,
+        "status": "sent" if confirmed else "draft",
+        "source_type": "human_confirmed" if confirmed else "pending_confirmation",
+        "timestamp": storage.now_iso(),
+    }
+    messages.append(record)
+    storage.save("messages", messages)
+    return record
 
 
 # ── Inventory lookup ──────────────────────────────────────────────────────────

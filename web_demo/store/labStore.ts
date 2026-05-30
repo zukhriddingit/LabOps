@@ -20,9 +20,11 @@ import { DEMO, INITIAL_SAMPLE, TUBES_OBSERVATION } from "@/lib/mockData";
 import type {
   ConnectionStatus,
   InventoryObservation,
+  InventoryRecord,
   MessageStatus,
   Sample,
   SampleStatus,
+  SampleLocation,
   LabViewPreset,
   TranscriptLine,
   VoiceLine,
@@ -31,6 +33,36 @@ import type {
   EventInfo,
   VoiceBrainMode,
 } from "@/types/lab";
+
+// Map any backend location string onto one of the 3 scene locations (null = unknown/skip).
+function toSceneLocation(value: unknown): SampleLocation | null {
+  const v = String(value ?? "").toLowerCase();
+  if (!v) return null;
+  if (v.includes("backup")) return "Backup Freezer";
+  if (v.includes("freezer") || v.includes("cold") || v.includes("storage")) return "Freezer";
+  if (/(bench|room|table|counter)/.test(v)) return "Bench 2";
+  return null;
+}
+
+// Build the local sample state when the backend reports C17 somewhere new (e.g. an agent move).
+function sampleFromBackendMove(current: Sample, loc: SampleLocation): Sample {
+  if (loc === "Bench 2") {
+    return {
+      ...current,
+      location: loc,
+      status: "tracking",
+      elapsedDemoSeconds: 0,
+      roomTempStartedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    ...current,
+    location: loc,
+    status: loc === "Backup Freezer" ? "stabilized" : "stored",
+    elapsedDemoSeconds: 0,
+    roomTempStartedAt: undefined,
+  };
+}
 
 const TRANSCRIPT: TranscriptLine[] = [
   { who: "human", text: "Guardian, I'm taking C17 out of minus 60 and putting it on Bench 2." },
@@ -60,6 +92,7 @@ interface LabState {
   equipment: EquipmentInfo[];
   events: EventInfo[];
   incidents: IncidentInfo[];
+  inventoryList: InventoryRecord[];
   simulateExcursion: () => Promise<void>;
   recoverFreezer: () => Promise<void>;
 
@@ -110,6 +143,7 @@ export const useLabStore = create<LabState>((set, get) => ({
   equipment: [],
   events: [],
   incidents: [],
+  inventoryList: [],
 
   selectedPinId: null,
   dashboardOpen: false,
@@ -128,12 +162,29 @@ export const useLabStore = create<LabState>((set, get) => ({
   pollState: async () => {
     try {
       const s: any = await getState();
-      set({
+      const patch: Partial<LabState> = {
         connection: "connected",
         equipment: s.equipment ?? [],
         events: s.events ?? [],
         incidents: s.incidents ?? [],
-      });
+        inventoryList: s.inventory ?? [],
+      };
+
+      // Reflect a real backend sample move (Qwen agent / voice / API) in the 3D scene —
+      // but never while the scripted local demo is animating, and only on an actual change
+      // (so we don't reset the fast bench timer on every 5 s poll).
+      if (!get().demoRunning) {
+        const c17 = (s.samples ?? []).find(
+          (x: any) => String(x.sample_id).toUpperCase() === "C17"
+        );
+        const loc = toSceneLocation(c17?.location);
+        const cur = get().sample;
+        if (loc && loc !== cur.location) {
+          patch.sample = sampleFromBackendMove(cur, loc);
+        }
+      }
+
+      set(patch as LabState);
     } catch {
       set({ connection: "disconnected" });
     }
@@ -194,6 +245,7 @@ export const useLabStore = create<LabState>((set, get) => ({
   },
 
   moveToBackupFreezer: async () => {
+    const from = get().sample.location; // capture BEFORE the optimistic update
     set((s) => ({
       sample: {
         ...s.sample,
@@ -205,9 +257,9 @@ export const useLabStore = create<LabState>((set, get) => ({
     }));
     try {
       await moveSample("C17", {
-        from_location: get().sample.location,
+        from_location: from,
         to_location: "Backup Freezer",
-        from_temperature: "21C",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
         allowed_room_temp_minutes: 20,
       });
       set({ connection: "connected" });

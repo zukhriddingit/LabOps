@@ -37,19 +37,28 @@ CONVERSATIONS: dict[str, list[dict[str, str]]] = {}
 
 # ── System prompt ─────────────────────────────────────────────────────────────
 
-SYSTEM = """You are LabOps Guardian, an AI coworker for a biotech research lab.
-You have real-time access to equipment state, incidents, SOPs, inventory, and operational history through your tools.
+SYSTEM = """You are LabOps Guardian, an AI coworker for a biotech (cardiovascular tissue) research lab.
+You have real-time access to equipment state, incidents, SOPs, inventory, samples, reminders, and operational history through your tools.
+
+Lab layout (static reference — ALWAYS call get_lab_state for live readings; this list just tells you what exists):
+- Cold Chain Zone: Freezer (-60 °C, sample C17's home), Backup Freezer, Biosafety Cabinet, CO2 Incubator (37 °C / 5% CO2), Reagent Fridge (4 °C).
+- Prep & Imaging: Bench 2 (room temp ~21 °C), Centrifuge 2, Microscope 1, Pipette Station, Inventory Shelf A, Chemical Cabinet 1, Autoclave, Biohazard Waste, a simulated shelf camera/sensor, and the PI / Postdoc station.
+- Tracked samples: C17 (cardiovascular tissue, home = Freezer, -60 °C, 20-minute room-temp limit on a bench) and A12 (backup tissue, Backup Freezer).
+- Inventory includes: 15 mL tubes (Inventory Shelf A, bin 3, count is camera-inferred), pipette tips (Shelf A, bin 1, low stock), reagent bottles (Chemical Cabinet 1).
+- Local SOPs cover: cardiovascular tissue prep, freezer temperature excursion, freezer sample storage, centrifuge setup, centrifuge error code 42, inventory shortage, and reagent calculation policy.
 
 Rules you must always follow:
-- NEVER state a temperature, incident ID, sample name, location, or any lab fact unless you retrieved it from a tool in this conversation. If you have not called a tool yet, you do not know the current state.
-- Call get_lab_state before answering any question about equipment, incidents, samples, or the overall inventory.
-- For general inventory questions, call list_inventory. For a specific item location or stock question, call find_inventory.
+- NEVER state a temperature, incident ID, sample name/location, count, or any live lab fact unless you retrieved it from a tool in this conversation. The static layout above tells you what exists, NOT its current readings — call a tool for those.
+- Call get_lab_state before answering any question about equipment status, incidents, samples, timers, or the overall inventory. It now also returns reminders (active room-temp timers) and experiment_runs.
+- For general inventory questions call list_inventory; for a specific item's location or stock call find_inventory.
+- To check any reagent math, call validate_calculation. It handles v/v (→ microliters), w/v (→ grams of solid), and stock dilutions (pass stock_percent for C1V1=C2V2). Choose the basis from the wording, report the expected value, and state which basis you assumed.
+- To escalate to a person, use send_emergency_message. ALWAYS draft first (confirmed=false), read the draft back, and only send (confirmed=true) after the user explicitly confirms. Never claim a message was sent unless the tool returns status "sent".
 - Sample IDs such as C17 and A12 are sample records, not inventory items. Use move_sample or get_lab_state for sample questions.
-- Canonical freezer names are "Freezer" and "Backup Freezer". If the user says "Freezer A", treat it as "Freezer"; if they say "Freezer B", treat it as "Backup Freezer".
+- Canonical freezer names are "Freezer" and "Backup Freezer". "Freezer A" → "Freezer"; "Freezer B" or "Freezer D" → "Backup Freezer". Equipment can also be referenced casually (e.g. "incubator", "fridge", "hood", "centrifuge") — resolve to the right unit.
 - Distinguish confirmed facts from historical context. Say "a prior incident involved X — this may be relevant but the current cause is not confirmed."
 - When citing SOP steps say "based on the local SOP".
 - Be brief and operational — you are talking to a lab worker, not writing a report.
-- If asked to update something (resolve an incident, add an observation, create a ticket), call the right tool and confirm what you did.
+- If asked to update something (resolve an incident, add an observation, create a ticket, post a sensor reading), call the right tool and confirm what you did.
 - After move_sample, only mention incidents or alarms if the tool result includes open_incidents. If open_incidents is empty, do not speculate about alarms.
 - Do not wrap responses in XML tags. Return plain conversational text only.
 """
@@ -216,6 +225,53 @@ TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "validate_calculation",
+            "description": (
+                "Check a reagent calculation and show the work with assumptions. Three modes: "
+                "percent_volume_volume (v/v → microliters of neat reagent), "
+                "percent_weight_volume (w/v → grams of solid, X g per 100 mL), and "
+                "stock_dilution (C1V1=C2V2 — pass stock_percent to dilute a stock to target_percent). "
+                "Use whenever the user asks you to verify a concentration, dilution, percent, volume, microliter, or gram amount. "
+                "Pick calculation_type from the wording (v/v vs w/v); if they mention a stock %, pass stock_percent."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_percent": {"type": "number", "description": "Target concentration percent, e.g. 0.02 for 0.02%"},
+                    "final_volume_ml": {"type": "number", "description": "Final volume in mL, e.g. 100"},
+                    "user_answer_ul": {"type": "number", "description": "Optional: microliters the user calculated (v/v or dilution), to verify."},
+                    "user_answer_g": {"type": "number", "description": "Optional: grams the user calculated (w/v), to verify."},
+                    "stock_percent": {"type": "number", "description": "Stock concentration percent, when diluting from a stock (enables C1V1=C2V2)."},
+                    "calculation_type": {"type": "string", "enum": ["percent_volume_volume", "percent_weight_volume", "stock_dilution"], "description": "Defaults to percent_volume_volume."},
+                },
+                "required": ["target_percent", "final_volume_ml"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_emergency_message",
+            "description": (
+                "Draft or send an escalation message to a teammate (postdoc, PI, lab manager, facilities). "
+                "SAFETY GATE: FIRST call with confirmed=false to create a DRAFT, then read the draft back and ask the user to confirm. "
+                "Only call again with confirmed=true AFTER the user explicitly says to send. "
+                "Never send without explicit confirmation, and never claim it was sent unless the tool returns status 'sent'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "recipient_role": {"type": "string", "description": "e.g. postdoc, PI, lab manager, facilities"},
+                    "message": {"type": "string", "description": "The message body to send."},
+                    "confirmed": {"type": "boolean", "description": "false = draft only (default); true = actually send, only after the user confirms."},
+                },
+                "required": ["recipient_role", "message"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "post_sensor_reading",
             "description": "Log a sensor reading for a piece of equipment. Triggers anomaly detection automatically.",
             "parameters": {
@@ -242,8 +298,27 @@ def _run_tool(name: str, args: dict[str, Any]) -> str:
                 "tickets": storage.load("tickets"),
                 "samples": storage.load("samples"),
                 "inventory": storage.load("inventory"),
+                "reminders": storage.load("reminders"),
+                "experiment_runs": storage.load("experiment_runs"),
                 "server_time": now_iso(),
             })
+
+        if name == "validate_calculation":
+            return json.dumps(lab_tools.validate_calculation(
+                calculation_type=args.get("calculation_type") or "percent_volume_volume",
+                target_percent=args.get("target_percent"),
+                final_volume_ml=args.get("final_volume_ml"),
+                user_answer_ul=args.get("user_answer_ul"),
+                stock_percent=args.get("stock_percent"),
+                user_answer_g=args.get("user_answer_g"),
+            ))
+
+        if name == "send_emergency_message":
+            return json.dumps(lab_tools.send_emergency_message(
+                recipient_role=args.get("recipient_role") or "postdoc",
+                message=args.get("message") or "",
+                confirmed=bool(args.get("confirmed", False)),
+            ))
 
         if name == "get_incidents":
             incidents = storage.load("incidents")

@@ -41,7 +41,7 @@ export default function Page() {
       <div className="brand-overlay">
         <span className="brand-name">🧪 LabOps Guardian</span>
         <span className="brand-tag">CARDIOVASCULAR LAB · BENCH 2 · LIVE</span>
-        <span className="brand-hint">WASD / arrows to move · drag to look · click a pin</span>
+        <span className="brand-hint">WASD / arrows to move · shift to run · drag to look · click a pin</span>
       </div>
 
       <InfoCard />

@@ -94,6 +94,19 @@ export interface IncidentInfo {
   updated_at?: string;
 }
 
+// A backend inventory record as returned in /api/state.inventory (and list_inventory).
+export interface InventoryRecord {
+  item_name: string;
+  location: string;
+  bin?: string | null;
+  record_count?: number | null;
+  camera_inferred_count?: number | null;
+  stock_level?: string;
+  confidence: Confidence;
+  source_type: SourceType;
+  timestamp?: string;
+}
+
 export interface EventInfo {
   id: string;
   type: string;
