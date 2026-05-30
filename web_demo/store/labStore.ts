@@ -8,6 +8,10 @@ import {
   moveSample,
   postEvent,
   sendEmergencyMessage,
+  validateCalculation,
+  retrieveSop,
+  generateHandoff,
+  findInventory,
 } from "@/lib/api";
 import { DEMO, INITIAL_SAMPLE, TUBES_OBSERVATION } from "@/lib/mockData";
 import type {
@@ -18,6 +22,7 @@ import type {
   SampleStatus,
   LabViewPreset,
   TranscriptLine,
+  VoiceLine,
 } from "@/types/lab";
 
 const TRANSCRIPT: TranscriptLine[] = [
@@ -68,6 +73,13 @@ interface LabState {
   runDemo: () => Promise<void>;
   advanceTranscript: () => void;
   reset: () => void;
+
+  // voice
+  voiceLog: VoiceLine[];
+  listening: boolean;
+  setListening: (b: boolean) => void;
+  runVoiceCommand: (text: string) => Promise<string>;
+  clearVoice: () => void;
 }
 
 export const useLabStore = create<LabState>((set, get) => ({
@@ -85,6 +97,8 @@ export const useLabStore = create<LabState>((set, get) => ({
   viewPreset: "entry",
   viewPresetTick: 0,
   demoRunning: false,
+  voiceLog: [],
+  listening: false,
   setSelectedPin: (id) => set({ selectedPinId: id }),
   toggleDashboard: (force) =>
     set((s) => ({ dashboardOpen: force ?? !s.dashboardOpen })),
@@ -251,6 +265,152 @@ export const useLabStore = create<LabState>((set, get) => ({
     set({ demoRunning: false, transcriptShown: 6, selectedPinId: "sample" });
   },
 
+  setListening: (b) => set({ listening: b }),
+  clearVoice: () => set({ voiceLog: [] }),
+
+  // The Guardian "brain": interpret a spoken/typed command, drive the 3D demo,
+  // and ground answers via the real backend tools. Returns the reply to speak.
+  runVoiceCommand: async (raw) => {
+    const text = (raw || "").trim();
+    if (!text) return "";
+    const pushVoice = (who: "human" | "agent", t: string) =>
+      set((s) => ({ voiceLog: [...s.voiceLog, { who, text: t }].slice(-20) }));
+    pushVoice("human", text);
+
+    const t = text.toLowerCase();
+    const num = (re: RegExp): number | undefined => {
+      const m = t.match(re);
+      return m ? parseFloat(m[1]) : undefined;
+    };
+    let reply = "";
+
+    // 1. confirm sending a pending draft
+    if (
+      get().messageStatus === "draft" &&
+      /\b(yes|send it|send|confirm|go ahead|do it|affirmative|please send)\b/.test(t)
+    ) {
+      try {
+        await sendEmergencyMessage("postdoc", get().messageDraft ?? EMERGENCY_TEXT, true);
+        set({ messageStatus: "sent", connection: "connected" });
+      } catch {
+        set({ connection: "disconnected" });
+      }
+      reply = "Sent to the postdoc.";
+    }
+    // 2. emergency message / escalation
+    else if (
+      /(contaminat|gloves|my hands|postdoc|\bp\.?i\.?\b|message the|notify the|alert the|emergency)/.test(t)
+    ) {
+      await get().draftMessage();
+      reply = `Draft to the postdoc: ${EMERGENCY_TEXT} Confirm send?`;
+    }
+    // 3. reagent calculation check
+    else if (
+      /(calculat|percent|%|microlit|µl|\bul\b|dilut|is that right|is that correct|tween|v\/v)/.test(t) &&
+      /\d/.test(t)
+    ) {
+      const target_percent = num(/([\d.]+)\s*(?:percent|%)/);
+      const final_volume_ml = num(/([\d.]+)\s*(?:millilit(?:re|er)s?|mls?|ml)\b/);
+      const user_answer_ul = num(/([\d.]+)\s*(?:microlit(?:re|er)s?|micro ?lit(?:re|er)s?|µl|ul)\b/);
+      if (target_percent === undefined || final_volume_ml === undefined) {
+        reply =
+          "I can check that — give me the target percent, the final volume in milliliters, and the microliters you calculated.";
+      } else {
+        try {
+          const r = await validateCalculation({ target_percent, final_volume_ml, user_answer_ul });
+          const lead =
+            r.status === "correct"
+              ? "That's correct"
+              : r.status === "incorrect"
+                ? `That doesn't match — I get ${r.expected_ul} microliters`
+                : "I can't confirm that without more detail";
+          reply = `${lead}, assuming ${(r.assumptions || []).join(" and ")}. ${r.warning ?? ""}`.trim();
+          set({ connection: "connected" });
+        } catch {
+          set({ connection: "disconnected" });
+          reply = "I can't reach the calculation tool right now, so I won't validate it yet.";
+        }
+      }
+    }
+    // 4. inventory / location
+    else if (/(where|find|locate|tubes|inventory|shelf|15 ?ml|fifteen mil)/.test(t)) {
+      await get().findTubes();
+      try {
+        const r: any = await findInventory("15 mL tubes");
+        reply = `The inventory record puts the 15 mL tubes at ${r.location}. The simulated shelf counter sees ${r.camera_inferred_count} boxes, confidence ${r.confidence}. Human confirmation recommended.`;
+        set({ connection: "connected" });
+      } catch {
+        reply =
+          "The inventory record puts the 15 mL tubes on Shelf A, bin 3. Simulated count two boxes, confidence medium.";
+      }
+    }
+    // 5. SOP / protocol
+    else if (/(sop|protocol|procedure|centrifuge|rotor|spin down|setup|prep)/.test(t)) {
+      try {
+        const r = await retrieveSop(text, "C17");
+        reply = r.found
+          ? `Based on the local SOP, the match is ${r.title}. ${r.caution ?? ""}`.trim()
+          : "I don't have a matching local SOP, and I won't guess at protocol steps.";
+        set({ connection: "connected" });
+      } catch {
+        set({ connection: "disconnected" });
+        reply = "I can't reach the SOP tool right now.";
+      }
+    }
+    // 6. move to backup freezer
+    else if (
+      /(backup|freezer d|put it back|back (in|to|into) (the )?(freezer|storage|cold)|stabiliz|return.*storage)/.test(t)
+    ) {
+      await get().moveToBackupFreezer();
+      reply = "Moving C17 to the backup freezer. It's stabilizing in cold storage.";
+    }
+    // 7. move to bench
+    else if (
+      /(bench|out of (minus|negative|-?\s?60)|taking c.?17|move c.?17|onto the bench|on the bench|remove c.?17)/.test(t)
+    ) {
+      await get().moveToBench();
+      reply = "Logged. C17 is on Bench 2. I'll warn you at 18 minutes and escalate at 20.";
+    }
+    // 8. warning / critical (explicit)
+    else if (/\b(warning|near (the )?limit|eighteen minutes?)\b/.test(t)) {
+      get().triggerWarning();
+      reply = "C17 is approaching the room-temperature limit.";
+    } else if (/\b(critical|escalat|exceeded|over the limit|twenty[- ]minute)\b/.test(t)) {
+      get().triggerCritical();
+      reply = "C17 has exceeded the room-temperature limit. Escalation recommended.";
+    }
+    // 9. shift handoff
+    else if (/(hand ?off|night shift|summary|brief|status report|wrap up)/.test(t)) {
+      const s = get();
+      try {
+        await generateHandoff("night");
+        set({ connection: "connected" });
+      } catch {
+        set({ connection: "disconnected" });
+      }
+      reply =
+        `Handoff: C17 is currently on ${s.sample.location}, status ${s.sample.status}. ` +
+        (s.inventory
+          ? `15 mL tubes located on ${s.inventory.official_location}, confidence ${s.inventory.confidence}. `
+          : "") +
+        (s.messageStatus !== "none" ? `Postdoc message ${s.messageStatus}. ` : "") +
+        "Root cause and final outcome are not yet confirmed.";
+    }
+    // 10. status query
+    else if (/(status|where is c.?17|how long|the timer|how is c)/.test(t)) {
+      const s = get().sample;
+      reply = `C17 is on ${s.location}, status ${s.status}.`;
+    }
+    // help / fallback
+    else {
+      reply =
+        "I can track samples, check reagent calculations, find inventory, clarify local SOPs, and message your team. Try: move C17 to the bench, or where are the 15 mL tubes.";
+    }
+
+    pushVoice("agent", reply);
+    return reply;
+  },
+
   advanceTranscript: () =>
     set((s) => ({
       transcriptShown: Math.min(s.transcript.length, s.transcriptShown + 1),
@@ -268,5 +428,7 @@ export const useLabStore = create<LabState>((set, get) => ({
       viewPreset: "entry",
       viewPresetTick: 0,
       demoRunning: false,
+      voiceLog: [],
+      listening: false,
     }),
 }));

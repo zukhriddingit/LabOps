@@ -61,6 +61,11 @@ export interface TranscriptLine {
   text: string;
 }
 
+export interface VoiceLine {
+  who: "human" | "agent";
+  text: string;
+}
+
 // Structured event sent to POST /api/events. No image data — structured-only.
 export interface InventoryObservationEvent {
   event_type: "inventory_observation";

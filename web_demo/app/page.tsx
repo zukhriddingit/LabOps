@@ -6,6 +6,7 @@ import HudBar from "@/components/lab/HudBar";
 import Dashboard from "@/components/lab/Dashboard";
 import InfoCard from "@/components/lab/InfoCard";
 import CameraControls from "@/components/lab/CameraControls";
+import VoicePanel from "@/components/lab/VoicePanel";
 import { useLabStore } from "@/store/labStore";
 
 // The R3F Canvas can't server-render — load it client-only.
@@ -44,6 +45,7 @@ export default function Page() {
       </div>
 
       <InfoCard />
+      <VoicePanel />
       <CameraControls />
       <Dashboard />
       <HudBar />

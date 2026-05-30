@@ -56,6 +56,33 @@ export async function findInventory(item_name: string) {
   });
 }
 
+export interface CalcPayload {
+  target_percent?: number;
+  final_volume_ml?: number;
+  user_answer_ul?: number;
+}
+
+export async function validateCalculation(p: CalcPayload): Promise<any> {
+  return req("/api/tools/validate_calculation", {
+    method: "POST",
+    body: JSON.stringify({ calculation_type: "percent_volume_volume", ...p }),
+  });
+}
+
+export async function retrieveSop(query: string, sample_id?: string): Promise<any> {
+  return req("/api/tools/retrieve_sop", {
+    method: "POST",
+    body: JSON.stringify({ query, sample_id }),
+  });
+}
+
+export async function generateHandoff(shift?: string): Promise<any> {
+  return req("/api/tools/generate_handoff", {
+    method: "POST",
+    body: JSON.stringify({ shift }),
+  });
+}
+
 export async function sendEmergencyMessage(
   recipient_role: string,
   message: string,
