@@ -46,6 +46,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_LABOPS_API_URL: https://zukhriddinai-labops-guardian-api.hf.space
+          NEXT_PUBLIC_VOICE_GATEWAY_URL: https://zukhriddinai-labops-guardian-api.hf.space
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

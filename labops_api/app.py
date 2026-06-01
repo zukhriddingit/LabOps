@@ -11,10 +11,12 @@ Run:
 from __future__ import annotations
 
 import re
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import httpx
 from dotenv import load_dotenv
 _root = Path(__file__).parent.parent
 load_dotenv(_root / ".env")          # local overrides (gitignored)
@@ -22,6 +24,7 @@ load_dotenv(_root / ".env.example", override=False)  # fallback for fresh clones
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from labops_api import storage, tools
@@ -498,6 +501,10 @@ class ChatRequest(BaseModel):
     sender: str = "user"
 
 
+class TTSRequest(BaseModel):
+    text: str
+
+
 def _chat_response(text: str) -> list[dict[str, Any]]:
     return [{"recipient_id": "user", "text": text}]
 
@@ -509,3 +516,92 @@ async def chat(req: ChatRequest) -> list[dict[str, Any]]:
 
     reply = await _agent.run(req.message, sender=req.sender)
     return _chat_response(reply)
+
+
+def _env(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip()
+
+
+@app.get("/api/voice/health")
+def voice_health() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "tts_provider": _env("TTS_PROVIDER", "speechmatics").lower(),
+        "speechmatics_tts_configured": bool(
+            _env("SPEECHMATICS_TTS_API_KEY") or _env("SPEECHMATICS_API_KEY")
+        ),
+    }
+
+
+@app.post("/api/tts")
+async def tts(request: TTSRequest) -> Response:
+    """Hosted text-to-speech for the static demo frontend."""
+    provider = _env("TTS_PROVIDER", "speechmatics").lower()
+    if provider == "rime":
+        return await _tts_rime(request)
+    return await _tts_speechmatics(request)
+
+
+async def _tts_speechmatics(request: TTSRequest) -> Response:
+    api_key = _env("SPEECHMATICS_TTS_API_KEY") or _env("SPEECHMATICS_API_KEY")
+    base_url = _env("SPEECHMATICS_TTS_URL", "https://preview.tts.speechmatics.com/generate").rstrip("/")
+    voice = _env("SPEECHMATICS_TTS_VOICE", "sarah")
+
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Speechmatics TTS is not configured.")
+
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(f"{base_url}/{voice}", headers=headers, json={"text": request.text})
+            if not response.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Speechmatics TTS failed: {response.status_code} - {response.text[:200]}",
+                )
+            return Response(
+                content=response.content,
+                media_type=response.headers.get("content-type", "audio/wav"),
+            )
+    except HTTPException:
+        raise
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot reach Speechmatics TTS: {exc}")
+
+
+async def _tts_rime(request: TTSRequest) -> Response:
+    api_key = _env("RIME_API_KEY")
+    api_url = _env("RIME_API_URL", "https://users.rime.ai/v1/rime-tts")
+
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Rime TTS is not configured.")
+
+    payload = {
+        "text": request.text,
+        "modelId": _env("RIME_MODEL_ID", "mistv2"),
+        "speaker": _env("RIME_SPEAKER", "astra"),
+        "lang": "eng",
+        "samplingRate": 22050,
+        "speedAlpha": 1.0,
+    }
+    headers = {
+        "Accept": "audio/mp3",
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(api_url, headers=headers, json=payload)
+            if not response.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Rime TTS failed: {response.status_code} - {response.text[:200]}",
+                )
+            return Response(
+                content=response.content,
+                media_type=response.headers.get("content-type", "audio/mpeg"),
+            )
+    except HTTPException:
+        raise
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot reach Rime TTS: {exc}")
