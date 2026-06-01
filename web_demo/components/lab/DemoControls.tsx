@@ -7,11 +7,13 @@ export default function DemoControls() {
   const {
     sample,
     moveToBench,
+    moveToFreezer,
     triggerWarning,
     triggerCritical,
     findTubes,
     draftMessage,
     moveToBackupFreezer,
+    simulateExcursion,
     runDemo,
     demoRunning,
     reset,
@@ -24,23 +26,29 @@ export default function DemoControls() {
       <button className="btn primary" onClick={runDemo} disabled={demoRunning}>
         {demoRunning ? "Running scripted demo..." : "Run guided demo"}
       </button>
-      <button className="btn primary" onClick={moveToBench} disabled={onBench}>
+      <button className="btn primary" onClick={moveToBench} disabled={onBench || demoRunning}>
         Move C17 to Bench
       </button>
-      <button className="btn" onClick={triggerWarning}>
+      <button className="btn" onClick={triggerWarning} disabled={demoRunning}>
         Trigger 18-min warning
       </button>
-      <button className="btn" onClick={triggerCritical}>
+      <button className="btn" onClick={triggerCritical} disabled={demoRunning}>
         Trigger 20-min escalation
       </button>
-      <button className="btn" onClick={findTubes}>
+      <button className="btn" onClick={findTubes} disabled={demoRunning}>
         Find 15 mL tubes
       </button>
-      <button className="btn" onClick={draftMessage}>
+      <button className="btn" onClick={draftMessage} disabled={demoRunning}>
         Draft emergency message
       </button>
-      <button className="btn" onClick={moveToBackupFreezer}>
+      <button className="btn" onClick={moveToFreezer} disabled={demoRunning || sample.location === "Freezer"}>
+        Move C17 to Freezer
+      </button>
+      <button className="btn" onClick={moveToBackupFreezer} disabled={demoRunning || sample.location === "Backup Freezer"}>
         Move C17 to Backup Freezer
+      </button>
+      <button className="btn" onClick={simulateExcursion} disabled={demoRunning}>
+        Simulate freezer excursion
       </button>
       <button className="btn ghost" onClick={reset}>
         Reset demo

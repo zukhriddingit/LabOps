@@ -1,22 +1,22 @@
 [
   {
-    "id": "freezer_b",
-    "name": "Freezer B",
+    "id": "freezer",
+    "name": "Freezer",
     "kind": "ultra_low_freezer",
-    "current_temperature": "-70C",
+    "current_temperature": "-60C",
     "status": "ok",
     "normal_range": {
-      "min": -90,
-      "max": -70,
+      "min": -80,
+      "max": -50,
       "unit": "C"
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-30T04:26:43+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
-    "id": "freezer_d",
-    "name": "Freezer D (Backup)",
+    "id": "backup_freezer",
+    "name": "Backup Freezer",
     "kind": "ultra_low_freezer",
     "current_temperature": "-81C",
     "status": "ok",
@@ -27,18 +27,17 @@
     },
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T00:00:00+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
     "id": "bench_2",
     "name": "Bench 2",
     "kind": "bench",
-    "current_temperature": "15C",
+    "current_temperature": "21C",
     "status": "ok",
-    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T22:00:50+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
     "id": "centrifuge_2",
@@ -46,10 +45,9 @@
     "kind": "centrifuge",
     "current_temperature": null,
     "status": "idle",
-    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T00:00:00+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
     "id": "microscope_1",
@@ -57,20 +55,118 @@
     "kind": "microscope",
     "current_temperature": null,
     "status": "idle",
-    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T00:00:00+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
   },
   {
     "id": "shelf_a",
-    "name": "Storage Shelf A",
+    "name": "Inventory Shelf A",
     "kind": "shelf",
     "current_temperature": null,
     "status": "ok",
-    "normal_range": null,
     "source_type": "observed_by_sensor",
     "confidence": "high",
-    "updated_at": "2026-05-29T00:00:00+00:00"
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "co2_incubator",
+    "name": "CO2 Incubator",
+    "kind": "co2_incubator",
+    "current_temperature": "37C",
+    "status": "ok",
+    "normal_range": {
+      "min": 35,
+      "max": 39,
+      "unit": "C"
+    },
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "reagent_fridge",
+    "name": "Reagent Fridge",
+    "kind": "fridge",
+    "current_temperature": "4C",
+    "status": "ok",
+    "normal_range": {
+      "min": 2,
+      "max": 8,
+      "unit": "C"
+    },
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "chem_cabinet_1",
+    "name": "Chemical Cabinet 1",
+    "kind": "chemical_cabinet",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "biosafety_cabinet",
+    "name": "Biosafety Cabinet",
+    "kind": "biosafety_cabinet",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "autoclave",
+    "name": "Autoclave",
+    "kind": "autoclave",
+    "current_temperature": null,
+    "status": "idle",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "pipette_station",
+    "name": "Pipette Station",
+    "kind": "bench_tool",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "biohazard_bin",
+    "name": "Biohazard Waste",
+    "kind": "waste",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "sim_camera",
+    "name": "Simulated Camera / Shelf Sensor",
+    "kind": "sensor",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
+  },
+  {
+    "id": "pi_postdoc",
+    "name": "PI / Postdoc Station",
+    "kind": "workstation",
+    "current_temperature": null,
+    "status": "ok",
+    "source_type": "observed_by_sensor",
+    "confidence": "high",
+    "updated_at": "2026-05-30T18:41:22+00:00"
   }
 ]

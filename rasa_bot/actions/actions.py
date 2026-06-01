@@ -96,7 +96,7 @@ class ActionMoveSample(Action):
             sample = client.get_sample(str(sample_id))
             if sample.get("ok"):
                 from_location = sample.get("location") or sample.get("current_location") or sample.get("latest_location")
-            from_location = from_location or "Freezer B"
+            from_location = from_location or "Freezer"
 
         payload = {
             "from_location": from_location,

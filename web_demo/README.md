@@ -48,12 +48,12 @@ web_demo/
 
 ## Scene objects
 
-Freezer B · Backup Freezer D · Bench 2 · Sample C17 · Inventory Shelf A · Chemical Cabinet 1
+Freezer · Backup Freezer · Bench 2 · Sample C17 · Inventory Shelf A · Chemical Cabinet 1
 · Centrifuge 2 · Microscope 1 · simulated camera/shelf sensor node · PI/Postdoc station.
 
 ## Demo flow (Demo Controls panel)
 
-1. **Move C17 to Bench** → vial animates Freezer B → Bench 2, `POST /api/samples/C17/move`,
+1. **Move C17 to Bench** → vial animates Freezer → Bench 2, `POST /api/samples/C17/move`,
    the room-temp timer starts.
 2. Fast mode: **20 lab min ≈ 20 s** — warning at 18 s (C17 turns amber, "near limit"),
    critical at 20 s (C17 pulses red, "exceeded limit — escalation recommended").

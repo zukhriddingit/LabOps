@@ -10,10 +10,12 @@ import {
   warmUpVoices,
   type Recognizer,
 } from "@/lib/speech";
+import Markdown from "./Markdown";
 
 export default function VoicePanel() {
   const voiceLog = useLabStore((s) => s.voiceLog);
   const listening = useLabStore((s) => s.listening);
+  const voiceBrain = useLabStore((s) => s.voiceBrain);
   const setListening = useLabStore((s) => s.setListening);
   const runVoiceCommand = useLabStore((s) => s.runVoiceCommand);
 
@@ -121,6 +123,9 @@ export default function VoicePanel() {
         <span className="voice-title">
           🎙 Guardian Voice {speaking && <span className="voice-speaking">speaking…</span>}
         </span>
+        <span className={`voice-brain ${voiceBrain}`}>
+          {voiceBrain === "rasa" ? "Qwen backend" : voiceBrain === "local" ? "Local fallback" : "Brain checking"}
+        </span>
         <div className="voice-head-btns">
           <button
             className={`voice-mini ${muted ? "on" : ""}`}
@@ -149,7 +154,11 @@ export default function VoicePanel() {
         {voiceLog.map((l, i) => (
           <div key={i} className={`voice-line ${l.who}`}>
             <span className="who">{l.who === "human" ? "You" : "Guardian"}</span>
-            <span className="txt">{l.text}</span>
+            {l.who === "agent" ? (
+              <Markdown text={l.text} className="txt md" />
+            ) : (
+              <span className="txt">{l.text}</span>
+            )}
           </div>
         ))}
         {partial && <div className="voice-partial">{partial}…</div>}

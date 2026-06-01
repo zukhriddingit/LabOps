@@ -59,12 +59,12 @@ async function submit(text: string) {
   if (!trimmed) return;
   addMessage("worker", trimmed);
   textInput.value = "";
-  status.textContent = "Sending to Rasa...";
+  status.textContent = "Sending to Guardian...";
 
   try {
     const replies = await sendToRasa(trimmed);
     if (!replies.length) {
-      addMessage("guardian", "I did not get a response from Rasa.");
+      addMessage("guardian", "I did not get a response from Guardian.");
       return;
     }
     for (const reply of replies) {
@@ -74,7 +74,7 @@ async function submit(text: string) {
       }
     }
   } catch (error) {
-    addMessage("guardian", "I cannot reach the Rasa REST server. Text is still captured locally.");
+    addMessage("guardian", "I cannot reach the Guardian backend. Text is still captured locally.");
   } finally {
     status.textContent = "Ready.";
   }

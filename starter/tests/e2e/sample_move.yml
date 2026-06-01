@@ -25,7 +25,7 @@ test_cases:
               - name: sample_id
                 value: "C17"
               - name: to_location
-      - user: "It came out of Freezer B."
+      - user: "It came out of Freezer."
         assertions:
           - action_executed: action_move_sample
           - bot_uttered:

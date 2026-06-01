@@ -40,6 +40,7 @@ from labops_api.models import (
     SendEmergencyMessageRequest,
     ValidateCalculationRequest,
 )
+from labops_api.names import normalize_equipment_id, normalize_location
 from labops_api.storage import next_id, now_iso
 
 app = FastAPI(title="LabOps Guardian API", version="0.2.0")
@@ -87,7 +88,7 @@ def _process_sensor_event(req: EventRequest) -> dict | None:
     if req.type != "temperature_reading":
         return None
 
-    equipment_id = req.equipment_id
+    equipment_id = normalize_equipment_id(req.equipment_id)
     value = req.value
     if equipment_id is None or value is None:
         return None
@@ -185,6 +186,7 @@ def get_equipment() -> list[dict]:
 
 @app.get("/api/equipment/{equipment_id}")
 def get_equipment_by_id(equipment_id: str) -> dict:
+    equipment_id = normalize_equipment_id(equipment_id) or equipment_id
     for eq in storage.load("equipment"):
         if eq["id"] == equipment_id:
             return eq
@@ -196,8 +198,9 @@ def get_equipment_by_id(equipment_id: str) -> dict:
 @app.post("/api/events")
 def post_event(req: EventRequest) -> dict:
     payload = req.payload.copy()
-    if req.equipment_id:
-        payload["equipment_id"] = req.equipment_id
+    equipment_id = normalize_equipment_id(req.equipment_id)
+    if equipment_id:
+        payload["equipment_id"] = equipment_id
     if req.value is not None:
         payload["value"] = req.value
         payload["unit"] = req.unit
@@ -234,13 +237,16 @@ def move_sample(sample_id: str, req: MoveSampleRequest) -> dict:
     if sample is None:
         raise HTTPException(status_code=404, detail=f"Sample {sample_id} not found")
 
-    sample["location"] = req.to_location
+    to_location = normalize_location(req.to_location) or req.to_location
+    from_location = normalize_location(req.from_location)
+
+    sample["location"] = to_location
     sample["source_type"] = "user_reported"
     sample["confidence"] = "medium"
     sample["updated_at"] = now_iso()
 
     reminders_created: list[dict] = []
-    to_lower = req.to_location.lower()
+    to_lower = to_location.lower()
     is_room_temp = any(k in to_lower for k in ROOM_TEMP_LOCATIONS)
 
     if is_room_temp:
@@ -276,7 +282,7 @@ def move_sample(sample_id: str, req: MoveSampleRequest) -> dict:
     storage.save("samples", samples)
     event = _log_event(
         "sample_moved",
-        {"sample_id": sample["sample_id"], "from": req.from_location, "to": req.to_location,
+        {"sample_id": sample["sample_id"], "from": from_location, "to": to_location,
          "from_temperature": req.from_temperature,
          "allowed_room_temp_minutes": req.allowed_room_temp_minutes},
         "user_reported", "medium",
@@ -380,7 +386,8 @@ def generate_handoff(req: GenerateHandoffRequest | None = None) -> dict:
 @app.post("/api/tools/validate_calculation")
 def validate_calculation(req: ValidateCalculationRequest) -> dict:
     result = tools.validate_calculation(
-        req.calculation_type, req.target_percent, req.final_volume_ml, req.user_answer_ul
+        req.calculation_type, req.target_percent, req.final_volume_ml, req.user_answer_ul,
+        req.stock_percent, req.user_answer_g,
     )
     _log_event("calculation_validated", {"request": req.model_dump(), "result": result},
                "calculated", result.get("confidence", "medium"))
@@ -500,5 +507,5 @@ async def chat(req: ChatRequest) -> list[dict[str, Any]]:
     """Keyword-routes voice/text input to the right backend tool and returns a spoken reply."""
     t = req.message.lower().strip()
 
-    reply = await _agent.run(req.message)
+    reply = await _agent.run(req.message, sender=req.sender)
     return _chat_response(reply)

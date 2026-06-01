@@ -5,6 +5,7 @@ import InventoryPanel from "./InventoryPanel";
 import MessagePanel from "./MessagePanel";
 import DemoControls from "./DemoControls";
 import TranscriptPanel from "./TranscriptPanel";
+import TimelinePanel from "./TimelinePanel";
 import { useLabStore } from "@/store/labStore";
 
 export default function Dashboard() {
@@ -22,6 +23,7 @@ export default function Dashboard() {
       <div className="dashboard-body">
         <StatusPanel />
         <DemoControls />
+        <TimelinePanel />
         <InventoryPanel />
         <MessagePanel />
         <TranscriptPanel />

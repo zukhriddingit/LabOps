@@ -12,18 +12,69 @@ import {
   retrieveSop,
   generateHandoff,
   findInventory,
+  postSensorReading,
+  recallHistory,
+  sendRasaMessage,
 } from "@/lib/api";
-import { DEMO, INITIAL_SAMPLE, TUBES_OBSERVATION } from "@/lib/mockData";
+import { DEMO, INITIAL_SAMPLE, INITIAL_A12, TUBES_OBSERVATION } from "@/lib/mockData";
+import { speak, cancelSpeak } from "@/lib/speech";
+
+// Map a scene location to the freezer equipment id whose door it owns (else null).
+const locToFreezerId = (loc: string): string | null =>
+  loc === "Backup Freezer" ? "backup_freezer" : loc === "Freezer" ? "freezer" : null;
+
+// Open a freezer door, then auto-close it shortly after (the "take it out" flourish).
+function flashDoor(set: (fn: (s: LabState) => Partial<LabState>) => void, id: string | null, ms = 2800) {
+  if (!id) return;
+  set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: true } }));
+  setTimeout(() => set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: false } })), ms);
+}
 import type {
   ConnectionStatus,
   InventoryObservation,
+  InventoryRecord,
   MessageStatus,
   Sample,
   SampleStatus,
+  SampleLocation,
   LabViewPreset,
   TranscriptLine,
   VoiceLine,
+  EquipmentInfo,
+  IncidentInfo,
+  EventInfo,
+  VoiceBrainMode,
 } from "@/types/lab";
+
+// Map any backend location string onto one of the 3 scene locations (null = unknown/skip).
+function toSceneLocation(value: unknown): SampleLocation | null {
+  const v = String(value ?? "").toLowerCase();
+  if (!v) return null;
+  if (v.includes("backup")) return "Backup Freezer";
+  if (v.includes("freezer") || v.includes("cold") || v.includes("storage")) return "Freezer";
+  if (/(bench|room|table|counter)/.test(v)) return "Bench 2";
+  return null;
+}
+
+// Build the local sample state when the backend reports C17 somewhere new (e.g. an agent move).
+function sampleFromBackendMove(current: Sample, loc: SampleLocation): Sample {
+  if (loc === "Bench 2") {
+    return {
+      ...current,
+      location: loc,
+      status: "tracking",
+      elapsedDemoSeconds: 0,
+      roomTempStartedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    ...current,
+    location: loc,
+    status: loc === "Backup Freezer" ? "stabilized" : "stored",
+    elapsedDemoSeconds: 0,
+    roomTempStartedAt: undefined,
+  };
+}
 
 const TRANSCRIPT: TranscriptLine[] = [
   { who: "human", text: "Guardian, I'm taking C17 out of minus 60 and putting it on Bench 2." },
@@ -41,13 +92,26 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface LabState {
   sample: Sample;
+  sampleA12: Sample;
+  freezerOpen: Record<string, boolean>;
+  toggleFreezerDoor: (id: string) => void;
+  moveA12: (to: SampleLocation) => Promise<void>;
   inventory: InventoryObservation | null;
   highlighted: string | null; // equipment id with glowing outline
   connection: ConnectionStatus;
   messageStatus: MessageStatus;
   messageDraft: string | null;
+  lastMsgKey: string; // tracks the latest backend message (id:status) to detect new drafts/sends
   transcript: TranscriptLine[];
   transcriptShown: number;
+
+  // backend memory (from /api/state)
+  equipment: EquipmentInfo[];
+  events: EventInfo[];
+  incidents: IncidentInfo[];
+  inventoryList: InventoryRecord[];
+  simulateExcursion: () => Promise<void>;
+  recoverFreezer: () => Promise<void>;
 
   // UI
   selectedPinId: string | null;
@@ -65,17 +129,23 @@ interface LabState {
 
   // demo actions
   moveToBench: () => Promise<void>;
+  moveToFreezer: () => Promise<void>;
   moveToBackupFreezer: () => Promise<void>;
   triggerWarning: () => void;
   triggerCritical: () => void;
   findTubes: () => Promise<void>;
   draftMessage: () => Promise<void>;
   runDemo: () => Promise<void>;
+  stopDemo: () => void;
+  demoCaption: string | null;
+  demoStep: number;
+  demoTotal: number;
   advanceTranscript: () => void;
   reset: () => void;
 
   // voice
   voiceLog: VoiceLine[];
+  voiceBrain: VoiceBrainMode;
   listening: boolean;
   setListening: (b: boolean) => void;
   runVoiceCommand: (text: string) => Promise<string>;
@@ -84,20 +154,32 @@ interface LabState {
 
 export const useLabStore = create<LabState>((set, get) => ({
   sample: { ...INITIAL_SAMPLE },
+  sampleA12: { ...INITIAL_A12 },
+  freezerOpen: {},
   inventory: null,
   highlighted: null,
   connection: "checking",
   messageStatus: "none",
   messageDraft: null,
+  lastMsgKey: "",
   transcript: TRANSCRIPT,
   transcriptShown: 2,
+
+  equipment: [],
+  events: [],
+  incidents: [],
+  inventoryList: [],
 
   selectedPinId: null,
   dashboardOpen: false,
   viewPreset: "entry",
   viewPresetTick: 0,
   demoRunning: false,
+  demoCaption: null,
+  demoStep: 0,
+  demoTotal: 0,
   voiceLog: [],
+  voiceBrain: "unknown",
   listening: false,
   setSelectedPin: (id) => set({ selectedPinId: id }),
   toggleDashboard: (force) =>
@@ -107,24 +189,91 @@ export const useLabStore = create<LabState>((set, get) => ({
 
   pollState: async () => {
     try {
-      await getState();
-      set({ connection: "connected" });
+      const s: any = await getState();
+      const patch: Partial<LabState> = {
+        connection: "connected",
+        equipment: s.equipment ?? [],
+        events: s.events ?? [],
+        incidents: s.incidents ?? [],
+        inventoryList: s.inventory ?? [],
+      };
+
+      // Reflect a real backend sample move (Qwen agent / voice / API) in the 3D scene —
+      // but never while the scripted local demo is animating, and only on an actual change
+      // (so we don't reset the fast bench timer on every 5 s poll).
+      if (!get().demoRunning) {
+        const c17 = (s.samples ?? []).find(
+          (x: any) => String(x.sample_id).toUpperCase() === "C17"
+        );
+        const loc = toSceneLocation(c17?.location);
+        const cur = get().sample;
+        // Only adopt a backend-driven move when the sample is at rest locally, so we
+        // never clobber an active bench/warning/critical state (e.g. the trigger buttons
+        // or a live timer) whose move wasn't persisted to the backend.
+        const atRest = cur.status === "stored" || cur.status === "stabilized";
+        if (loc && loc !== cur.location && atRest) {
+          patch.sample = sampleFromBackendMove(cur, loc);
+        }
+      }
+
+      // Reflect agent/voice-driven emergency drafts + sends in the UI (MessagePanel,
+      // pi_postdoc glow). React only to a NEW message or a draft->sent change so a
+      // local reset stays clean.
+      const msgs: any[] = s.messages ?? [];
+      const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+      const key = lastMsg ? `${lastMsg.id}:${lastMsg.status}` : "";
+      if (key && key !== get().lastMsgKey) {
+        patch.lastMsgKey = key;
+        patch.messageStatus = lastMsg.status === "sent" ? "sent" : "draft";
+        patch.messageDraft = lastMsg.message ?? get().messageDraft;
+      }
+
+      set(patch as LabState);
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  // Simulate a freezer temperature excursion: the backend auto-creates an incident
+  // and flips the primary Freezer into alarm. Shows the monitoring/resilience layer live.
+  simulateExcursion: async () => {
+    try {
+      await postSensorReading("freezer", -40, "C");
+      await get().pollState();
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  recoverFreezer: async () => {
+    try {
+      await postSensorReading("freezer", -60, "C");
+      await get().pollState();
     } catch {
       set({ connection: "disconnected" });
     }
   },
 
   tick: () => {
-    const { sample } = get();
-    if (sample.status !== "tracking" && sample.status !== "warning") return;
-    const elapsed = sample.elapsedDemoSeconds + 1;
-    let status: SampleStatus = sample.status;
-    if (elapsed >= DEMO.limitSeconds) status = "critical";
-    else if (elapsed >= DEMO.warningSeconds) status = "warning";
-    set({ sample: { ...sample, elapsedDemoSeconds: elapsed, status } });
+    const advance = (s: Sample): Sample => {
+      if (s.status !== "tracking" && s.status !== "warning") return s;
+      const elapsed = s.elapsedDemoSeconds + 1;
+      let status: SampleStatus = s.status;
+      if (elapsed >= DEMO.limitSeconds) status = "critical";
+      else if (elapsed >= DEMO.warningSeconds) status = "warning";
+      return { ...s, elapsedDemoSeconds: elapsed, status };
+    };
+    set((st) => {
+      const c17 = advance(st.sample);
+      const a12 = advance(st.sampleA12);
+      if (c17 === st.sample && a12 === st.sampleA12) return {};
+      return { sample: c17, sampleA12: a12 };
+    });
   },
 
   moveToBench: async () => {
+    const from = get().sample.location;
+    flashDoor(set, locToFreezerId(from)); // open the freezer C17 is leaving
     set((s) => ({
       sample: {
         ...s.sample,
@@ -137,9 +286,34 @@ export const useLabStore = create<LabState>((set, get) => ({
     }));
     try {
       await moveSample("C17", {
-        from_location: "Freezer B",
+        from_location: from,
         to_location: "Bench 2",
-        from_temperature: "-60C",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
+        allowed_room_temp_minutes: 20,
+      });
+      set({ connection: "connected" });
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  moveToFreezer: async () => {
+    const from = get().sample.location; // capture BEFORE the optimistic update
+    flashDoor(set, "freezer"); // open the destination door as C17 goes in
+    set((s) => ({
+      sample: {
+        ...s.sample,
+        location: "Freezer",
+        status: "stored",
+        elapsedDemoSeconds: 0,
+        roomTempStartedAt: undefined,
+      },
+    }));
+    try {
+      await moveSample("C17", {
+        from_location: from,
+        to_location: "Freezer",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
         allowed_room_temp_minutes: 20,
       });
       set({ connection: "connected" });
@@ -149,10 +323,12 @@ export const useLabStore = create<LabState>((set, get) => ({
   },
 
   moveToBackupFreezer: async () => {
+    const from = get().sample.location; // capture BEFORE the optimistic update
+    flashDoor(set, "backup_freezer");
     set((s) => ({
       sample: {
         ...s.sample,
-        location: "Backup Freezer D",
+        location: "Backup Freezer",
         status: "stabilized",
         elapsedDemoSeconds: 0,
         roomTempStartedAt: undefined,
@@ -160,9 +336,9 @@ export const useLabStore = create<LabState>((set, get) => ({
     }));
     try {
       await moveSample("C17", {
-        from_location: get().sample.location,
-        to_location: "Backup Freezer D",
-        from_temperature: "21C",
+        from_location: from,
+        to_location: "Backup Freezer",
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
         allowed_room_temp_minutes: 20,
       });
       set({ connection: "connected" });
@@ -171,11 +347,41 @@ export const useLabStore = create<LabState>((set, get) => ({
     }
   },
 
+  // A12 (backup sample) — now fully movable, mirroring C17.
+  moveA12: async (to) => {
+    const from = get().sampleA12.location;
+    const toBench = to === "Bench 2";
+    flashDoor(set, toBench ? locToFreezerId(from) : locToFreezerId(to));
+    set((s) => ({
+      sampleA12: {
+        ...s.sampleA12,
+        location: to,
+        status: toBench ? "tracking" : to === "Freezer" ? "stored" : "stabilized",
+        elapsedDemoSeconds: 0,
+        roomTempStartedAt: toBench ? new Date().toISOString() : undefined,
+      },
+    }));
+    try {
+      await moveSample("A12", {
+        from_location: from,
+        to_location: to,
+        from_temperature: from === "Bench 2" ? "21C" : "-60C",
+        allowed_room_temp_minutes: 20,
+      });
+      set({ connection: "connected" });
+    } catch {
+      set({ connection: "disconnected" });
+    }
+  },
+
+  toggleFreezerDoor: (id) =>
+    set((s) => ({ freezerOpen: { ...s.freezerOpen, [id]: !s.freezerOpen[id] } })),
+
   triggerWarning: () =>
     set((s) => ({
       sample: {
         ...s.sample,
-        location: s.sample.location === "Freezer B" ? "Bench 2" : s.sample.location,
+        location: s.sample.location === "Freezer" ? "Bench 2" : s.sample.location,
         status: "warning",
         elapsedDemoSeconds: DEMO.warningSeconds,
       },
@@ -185,7 +391,7 @@ export const useLabStore = create<LabState>((set, get) => ({
     set((s) => ({
       sample: {
         ...s.sample,
-        location: s.sample.location === "Freezer B" ? "Bench 2" : s.sample.location,
+        location: s.sample.location === "Freezer" ? "Bench 2" : s.sample.location,
         status: "critical",
         elapsedDemoSeconds: DEMO.limitSeconds,
       },
@@ -221,48 +427,106 @@ export const useLabStore = create<LabState>((set, get) => ({
     }
   },
 
+  // Narrated, captioned guided tour. Each beat moves the camera, runs the real action,
+  // shows a caption, and is spoken aloud (Speechmatics). Pacing waits for the narration
+  // (capped) AND a minimum dwell, so it stays watchable even if muted.
   runDemo: async () => {
     if (get().demoRunning) return;
 
+    const narrate = (t: string) =>
+      new Promise<void>((resolve) => {
+        let done = false;
+        const fin = () => {
+          if (!done) {
+            done = true;
+            resolve();
+          }
+        };
+        speak(t, fin);
+        setTimeout(fin, 12000); // safety cap
+      });
+
+    type Beat = {
+      caption: string;
+      say: string;
+      camera: LabViewPreset;
+      pin: string | null;
+      run?: () => Promise<void> | void;
+      dwell: number;
+    };
+
+    const beats: Beat[] = [
+      { caption: "Welcome", camera: "entry", pin: null, dwell: 3200,
+        say: "Welcome to LabOps Guardian, your always-on lab coworker. Let me walk you through a shift." },
+      { caption: "Sample C17 in cold storage", camera: "cold", pin: "sample", dwell: 3200,
+        say: "This is sample C17, cardiovascular tissue, resting at minus sixty degrees in the freezer." },
+      { caption: "Out onto the bench — timer starts", camera: "bench", pin: "sample", dwell: 2600, run: () => get().moveToBench(),
+        say: "I'm logging C17 out onto Bench 2. A twenty minute room temperature timer starts now, and I've set a warning and an escalation reminder." },
+      { caption: "Checking a reagent calculation", camera: "bench", pin: "sample", dwell: 1800,
+        say: "Quick math check. Zero point zero two percent in one hundred milliliters is twenty microliters. Correct, assuming volume per volume." },
+      { caption: "Finding inventory", camera: "inventory", pin: "shelf_a", dwell: 2600, run: () => get().findTubes(),
+        say: "You need fifteen milliliter tubes. Inventory says Shelf A, bin three. The shelf camera sees two boxes at medium confidence, so please confirm." },
+      { caption: "Approaching the limit", camera: "bench", pin: "sample", dwell: 2000, run: () => get().triggerWarning(),
+        say: "Heads up. C17 is approaching its room temperature limit." },
+      { caption: "Limit exceeded — escalate to a human", camera: "message", pin: "pi_postdoc", dwell: 2800,
+        run: async () => { get().triggerCritical(); await get().draftMessage(); },
+        say: "C17 has hit the limit. Your gloves are contaminated, so I've drafted a message to the postdoc for you to confirm." },
+      { caption: "Back to safety", camera: "cold", pin: "sample", dwell: 2600, run: () => get().moveToBackupFreezer(),
+        say: "Stabilizing C17 in the backup freezer. Crisis averted." },
+      { caption: "Truth states — how I know what I know", camera: "overview", pin: null, dwell: 3600,
+        say: "Every fact I gave you was tagged with how I knew it and how confident I was. I never present a guess as a fact." },
+    ];
+
+    // Clean start without flipping demoRunning off (reset() would).
+    cancelSpeak();
     set((s) => ({
+      sample: { ...INITIAL_SAMPLE },
+      inventory: null,
+      highlighted: null,
+      messageStatus: "none",
+      messageDraft: null,
+      lastMsgKey: "",
+      voiceLog: [],
       demoRunning: true,
-      dashboardOpen: true,
+      dashboardOpen: false,
+      selectedPinId: null,
       viewPreset: "entry",
       viewPresetTick: s.viewPresetTick + 1,
+      demoCaption: null,
+      demoStep: 0,
+      demoTotal: beats.length,
+      transcriptShown: 2,
     }));
-    get().reset();
-    set((s) => ({
-      demoRunning: true,
-      dashboardOpen: true,
-      viewPreset: "cold",
-      viewPresetTick: s.viewPresetTick + 1,
-    }));
-    await wait(900);
+    await wait(700);
 
-    await get().moveToBench();
-    set((s) => ({ viewPreset: "bench", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 2, selectedPinId: "sample" }));
-    await wait(1900);
+    for (let i = 0; i < beats.length; i++) {
+      if (!get().demoRunning) break; // stopped
+      const b = beats[i];
+      set((s) => ({
+        viewPreset: b.camera,
+        viewPresetTick: s.viewPresetTick + 1,
+        selectedPinId: b.pin,
+        demoCaption: b.caption,
+        demoStep: i + 1,
+      }));
+      if (b.run) {
+        try {
+          await b.run();
+        } catch {
+          /* keep the tour going */
+        }
+      }
+      if (!get().demoRunning) break;
+      set((s) => ({ voiceLog: [...s.voiceLog, { who: "agent" as const, text: b.say }].slice(-20) }));
+      await Promise.all([narrate(b.say), wait(b.dwell)]);
+    }
 
-    get().triggerWarning();
-    set({ transcriptShown: 2, selectedPinId: "sample" });
-    await wait(1200);
+    set({ demoRunning: false, demoCaption: null });
+  },
 
-    set((s) => ({ viewPreset: "inventory", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 3, selectedPinId: "shelf_a" }));
-    await wait(900);
-    await get().findTubes();
-    set({ transcriptShown: 4, selectedPinId: "shelf_a" });
-    await wait(1600);
-
-    get().triggerCritical();
-    set((s) => ({ viewPreset: "message", viewPresetTick: s.viewPresetTick + 1, transcriptShown: 5, selectedPinId: "pi_postdoc" }));
-    await wait(900);
-    await get().draftMessage();
-    set({ transcriptShown: 6, selectedPinId: "pi_postdoc" });
-    await wait(1600);
-
-    set((s) => ({ viewPreset: "cold", viewPresetTick: s.viewPresetTick + 1, selectedPinId: "sample" }));
-    await get().moveToBackupFreezer();
-    set({ demoRunning: false, transcriptShown: 6, selectedPinId: "sample" });
+  stopDemo: () => {
+    cancelSpeak();
+    set({ demoRunning: false, demoCaption: null });
   },
 
   setListening: (b) => set({ listening: b }),
@@ -276,6 +540,24 @@ export const useLabStore = create<LabState>((set, get) => ({
     const pushVoice = (who: "human" | "agent", t: string) =>
       set((s) => ({ voiceLog: [...s.voiceLog, { who, text: t }].slice(-20) }));
     pushVoice("human", text);
+
+    try {
+      const replies = await sendRasaMessage(text);
+      const reply = replies
+        .map((r) => r.text)
+        .filter((r): r is string => Boolean(r?.trim()))
+        .join(" ");
+
+      if (reply) {
+        set({ voiceBrain: "rasa", connection: "connected" });
+        await get().pollState();
+        pushVoice("agent", reply);
+        return reply;
+      }
+      set({ voiceBrain: "local" });
+    } catch {
+      set({ voiceBrain: "local" });
+    }
 
     const t = text.toLowerCase();
     const num = (re: RegExp): number | undefined => {
@@ -357,7 +639,53 @@ export const useLabStore = create<LabState>((set, get) => ({
         reply = "I can't reach the SOP tool right now.";
       }
     }
-    // 6. move to backup freezer
+    // 5b. freezer excursion (sensor → incident)
+    else if (
+      /(excursion|freezer (is )?(warm|warming|too warm|rising|above)|temperature (alarm|spike|reading)|simulate.*(excursion|alarm))/.test(t)
+    ) {
+      await get().simulateExcursion();
+      const inc = get().incidents.find(
+        (i) => i.equipment_id === "freezer" && i.status !== "resolved"
+      );
+      reply = inc
+        ? `Freezer is reading ${inc.current_value}, above the ${inc.threshold} threshold. I've opened incident ${inc.incident_id}, severity ${inc.severity}. This is sensor-observed.`
+        : "Logged a Freezer temperature reading.";
+    }
+    // 5c. prior-incident history recall
+    else if (
+      /(prior|past|previous|history|happened before|seen this before|any (issues|incidents|problems))/.test(t)
+    ) {
+      try {
+        const r: any = await recallHistory("freezer");
+        set({ connection: "connected" });
+        if (r.found && r.related_events?.length) {
+          const e = r.related_events[0];
+          reply = `History: ${e.summary}. Recorded cause: ${e.recorded_cause ?? "unknown"}. ${r.uncertainty_note ?? ""}`.trim();
+        } else {
+          reply = "I don't have prior incidents on record for Freezer.";
+        }
+      } catch {
+        set({ connection: "disconnected" });
+        reply = "I can't reach the history tool right now.";
+      }
+    }
+    // 5d. incident / alarm status
+    else if (/(incident|alarm|what'?s wrong|active alert|open issue)/.test(t)) {
+      const open = get().incidents.filter((i) => i.status !== "resolved");
+      reply = open.length
+        ? `There ${open.length === 1 ? "is" : "are"} ${open.length} open incident${open.length === 1 ? "" : "s"}: ${open
+            .map((i) => `${i.incident_id}, ${i.type.replace(/_/g, " ")}, severity ${i.severity}`)
+            .join("; ")}.`
+        : "No open incidents. All monitored equipment is within range.";
+    }
+    // 6a. move back to the PRIMARY freezer (explicit)
+    else if (
+      /(primary freezer|main freezer|freezer a|home freezer|original freezer|back (in|to|into) (the )?(primary|main|its|original) freezer)/.test(t)
+    ) {
+      await get().moveToFreezer();
+      reply = "Moving C17 back to the primary freezer.";
+    }
+    // 6b. move to backup freezer / generic "put it back in cold"
     else if (
       /(backup|freezer d|put it back|back (in|to|into) (the )?(freezer|storage|cold)|stabiliz|return.*storage)/.test(t)
     ) {
@@ -419,16 +747,20 @@ export const useLabStore = create<LabState>((set, get) => ({
   reset: () =>
     set({
       sample: { ...INITIAL_SAMPLE },
+      sampleA12: { ...INITIAL_A12 },
+      freezerOpen: {},
       inventory: null,
       highlighted: null,
       messageStatus: "none",
       messageDraft: null,
+      lastMsgKey: "",
       transcriptShown: 2,
       selectedPinId: null,
       viewPreset: "entry",
       viewPresetTick: 0,
       demoRunning: false,
       voiceLog: [],
+      voiceBrain: "unknown",
       listening: false,
     }),
 }));

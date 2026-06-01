@@ -5,8 +5,18 @@ import type { InventoryObservation, Sample } from "@/types/lab";
 export const INITIAL_SAMPLE: Sample = {
   id: "C17",
   label: "Cardio Sample C17",
-  location: "Freezer B",
+  location: "Freezer",
   status: "stored",
+  storageTemperature: "-60C",
+  allowedRoomTempMinutes: 20,
+  elapsedDemoSeconds: 0,
+};
+
+export const INITIAL_A12: Sample = {
+  id: "A12",
+  label: "Backup tissue sample",
+  location: "Backup Freezer",
+  status: "stabilized",
   storageTemperature: "-60C",
   allowedRoomTempMinutes: 20,
   elapsedDemoSeconds: 0,

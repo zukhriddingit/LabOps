@@ -20,6 +20,25 @@ export async function getState(): Promise<unknown> {
   return req("/api/state");
 }
 
+export interface RasaReply {
+  recipient_id?: string;
+  text?: string;
+  image?: string;
+  buttons?: Array<{ title: string; payload: string }>;
+}
+
+export async function sendRasaMessage(message: string, sender = "web_demo"): Promise<RasaReply[]> {
+  const resp = await fetch("/api/rasa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ sender, message }),
+  });
+  if (!resp.ok) throw new Error(`/api/rasa -> HTTP ${resp.status}`);
+  const data = (await resp.json()) as { replies?: RasaReply[] };
+  return data.replies ?? [];
+}
+
 export interface MovePayload {
   from_location: string;
   to_location: string;
@@ -80,6 +99,33 @@ export async function generateHandoff(shift?: string): Promise<any> {
   return req("/api/tools/generate_handoff", {
     method: "POST",
     body: JSON.stringify({ shift }),
+  });
+}
+
+// Push a temperature sensor reading. The backend updates equipment state and, if the
+// value is outside the equipment's normal_range, auto-creates/updates an incident.
+export async function postSensorReading(
+  equipment_id: string,
+  value: number,
+  unit = "C"
+): Promise<any> {
+  return req("/api/events", {
+    method: "POST",
+    body: JSON.stringify({
+      type: "temperature_reading",
+      equipment_id,
+      value,
+      unit,
+      source_type: "observed_by_sensor",
+      confidence: "high",
+    }),
+  });
+}
+
+export async function recallHistory(equipment_id: string, issue_type?: string): Promise<any> {
+  return req("/api/tools/recall_history", {
+    method: "POST",
+    body: JSON.stringify({ equipment_id, issue_type }),
   });
 }
 

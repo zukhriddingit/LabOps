@@ -20,10 +20,10 @@ nlu:
   - intent: move_sample
     examples: |
       - Guardian, I'm taking Cardio Sample [C17](sample_id) out of [minus 60](temperature) and putting it on [Bench 2](to_location). It can stay at room temp for [20](duration_minutes) minutes
-      - move Sample [C17](sample_id) from [Freezer B](from_location) to [Bench 2](to_location)
-      - I moved [C17](sample_id) from [Freezer B](from_location) to [Bench 2](to_location)
+      - move Sample [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location)
+      - I moved [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location)
       - taking sample [A12](sample_id) out of [minus 80](temperature) and putting it on [Bench 1](to_location) for [15](duration_minutes) minutes
-      - log sample [C17](sample_id) from [Freezer B](from_location) to [Bench 2](to_location), room temp limit [20](duration_minutes) minutes
+      - log sample [C17](sample_id) from [Freezer](from_location) to [Bench 2](to_location), room temp limit [20](duration_minutes) minutes
       - [C17](sample_id) is now on [Bench 2](to_location)
       - put Cardio Sample [C17](sample_id) on [Bench 2](to_location) from [minus 60](temperature), limit [20 minutes](duration_minutes)
       - I am moving [C17](sample_id) from [Storage Shelf A](from_location) to [Centrifuge 2](to_location)

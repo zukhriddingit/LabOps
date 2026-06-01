@@ -7,6 +7,7 @@ import Dashboard from "@/components/lab/Dashboard";
 import InfoCard from "@/components/lab/InfoCard";
 import CameraControls from "@/components/lab/CameraControls";
 import VoicePanel from "@/components/lab/VoicePanel";
+import PresentationOverlay from "@/components/lab/PresentationOverlay";
 import { useLabStore } from "@/store/labStore";
 
 // The R3F Canvas can't server-render — load it client-only.
@@ -41,7 +42,7 @@ export default function Page() {
       <div className="brand-overlay">
         <span className="brand-name">🧪 LabOps Guardian</span>
         <span className="brand-tag">CARDIOVASCULAR LAB · BENCH 2 · LIVE</span>
-        <span className="brand-hint">WASD / arrows to move · drag to look · click a pin</span>
+        <span className="brand-hint">WASD / arrows to move · shift to run · drag to look · click a pin</span>
       </div>
 
       <InfoCard />
@@ -49,6 +50,7 @@ export default function Page() {
       <CameraControls />
       <Dashboard />
       <HudBar />
+      <PresentationOverlay />
     </div>
   );
 }

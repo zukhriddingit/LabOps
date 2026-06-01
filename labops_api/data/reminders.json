@@ -1,1 +1,128 @@
-[]
+[
+  {
+    "id": "rem_1",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-30T19:26:52+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:08:52+00:00"
+  },
+  {
+    "id": "rem_2",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-30T19:28:52+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:08:52+00:00"
+  },
+  {
+    "id": "rem_3",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-30T19:34:00+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:16:00+00:00"
+  },
+  {
+    "id": "rem_4",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-30T19:36:00+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:16:00+00:00"
+  },
+  {
+    "id": "rem_5",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-30T19:41:37+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:23:37+00:00"
+  },
+  {
+    "id": "rem_6",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-30T19:43:37+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:23:37+00:00"
+  },
+  {
+    "id": "rem_7",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-30T19:43:21+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:25:21+00:00"
+  },
+  {
+    "id": "rem_8",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-30T19:45:21+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:25:21+00:00"
+  },
+  {
+    "id": "rem_9",
+    "kind": "warning",
+    "sample_id": "A12",
+    "label": "A12 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-30T19:53:32+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:35:32+00:00"
+  },
+  {
+    "id": "rem_10",
+    "kind": "escalation",
+    "sample_id": "A12",
+    "label": "A12 hit the 20-min room-temp limit",
+    "due_at": "2026-05-30T19:55:32+00:00",
+    "status": "open",
+    "created_at": "2026-05-30T19:35:32+00:00"
+  },
+  {
+    "id": "rem_11",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-31T01:12:20+00:00",
+    "status": "open",
+    "created_at": "2026-05-31T00:54:20+00:00"
+  },
+  {
+    "id": "rem_12",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-31T01:14:20+00:00",
+    "status": "open",
+    "created_at": "2026-05-31T00:54:20+00:00"
+  },
+  {
+    "id": "rem_13",
+    "kind": "warning",
+    "sample_id": "C17",
+    "label": "C17 nearing room-temp limit (18 min)",
+    "due_at": "2026-05-31T01:12:48+00:00",
+    "status": "open",
+    "created_at": "2026-05-31T00:54:48+00:00"
+  },
+  {
+    "id": "rem_14",
+    "kind": "escalation",
+    "sample_id": "C17",
+    "label": "C17 hit the 20-min room-temp limit",
+    "due_at": "2026-05-31T01:14:48+00:00",
+    "status": "open",
+    "created_at": "2026-05-31T00:54:48+00:00"
+  }
+]

@@ -1,1 +1,312 @@
-[]
+[
+  {
+    "id": "evt_1",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:08:52+00:00"
+  },
+  {
+    "id": "evt_2",
+    "type": "inventory_observation",
+    "payload": {
+      "event_type": "inventory_observation",
+      "source_type": "simulated_camera_counter",
+      "item_id": "15ml_tubes",
+      "item_name": "15 mL tubes",
+      "location": "Shelf A / Bin 3",
+      "visible_count": 2,
+      "unit": "boxes",
+      "confidence": "medium",
+      "original_source_type": "simulated_camera_counter"
+    },
+    "source_type": "camera_inferred",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:09:13+00:00"
+  },
+  {
+    "id": "evt_3",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Backup Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:09:40+00:00"
+  },
+  {
+    "id": "evt_4",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Backup Freezer",
+      "to": "Bench 2",
+      "from_temperature": null,
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:16:00+00:00"
+  },
+  {
+    "id": "evt_5",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Freezer",
+      "from_temperature": null,
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:16:16+00:00"
+  },
+  {
+    "id": "evt_6",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:16:26+00:00"
+  },
+  {
+    "id": "evt_7",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Freezer",
+      "to": "Backup Freezer",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:16:34+00:00"
+  },
+  {
+    "id": "evt_8",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Backup Freezer",
+      "to": "Freezer",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:16:38+00:00"
+  },
+  {
+    "id": "evt_9",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:23:37+00:00"
+  },
+  {
+    "id": "evt_10",
+    "type": "inventory_observation",
+    "payload": {
+      "event_type": "inventory_observation",
+      "source_type": "simulated_camera_counter",
+      "item_id": "15ml_tubes",
+      "item_name": "15 mL tubes",
+      "location": "Shelf A / Bin 3",
+      "visible_count": 2,
+      "unit": "boxes",
+      "confidence": "medium",
+      "original_source_type": "simulated_camera_counter"
+    },
+    "source_type": "camera_inferred",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:23:58+00:00"
+  },
+  {
+    "id": "evt_11",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Backup Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:24:24+00:00"
+  },
+  {
+    "id": "evt_12",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Backup Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:25:21+00:00"
+  },
+  {
+    "id": "evt_13",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:25:42+00:00"
+  },
+  {
+    "id": "evt_14",
+    "type": "inventory_observation",
+    "payload": {
+      "event_type": "inventory_observation",
+      "source_type": "simulated_camera_counter",
+      "item_id": "15ml_tubes",
+      "item_name": "15 mL tubes",
+      "location": "Shelf A / Bin 3",
+      "visible_count": 2,
+      "unit": "boxes",
+      "confidence": "medium",
+      "original_source_type": "simulated_camera_counter"
+    },
+    "source_type": "camera_inferred",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:26:49+00:00"
+  },
+  {
+    "id": "evt_15",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Freezer",
+      "to": "Backup Freezer",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:27:00+00:00"
+  },
+  {
+    "id": "evt_16",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "A12",
+      "from": "Backup Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:35:32+00:00"
+  },
+  {
+    "id": "evt_17",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "A12",
+      "from": "Bench 2",
+      "to": "Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-30T19:35:50+00:00"
+  },
+  {
+    "id": "evt_18",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Backup Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-31T00:54:20+00:00"
+  },
+  {
+    "id": "evt_19",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Freezer",
+      "to": "Bench 2",
+      "from_temperature": "-60C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-31T00:54:48+00:00"
+  },
+  {
+    "id": "evt_20",
+    "type": "inventory_observation",
+    "payload": {
+      "event_type": "inventory_observation",
+      "source_type": "simulated_camera_counter",
+      "item_id": "15ml_tubes",
+      "item_name": "15 mL tubes",
+      "location": "Shelf A / Bin 3",
+      "visible_count": 2,
+      "unit": "boxes",
+      "confidence": "medium",
+      "original_source_type": "simulated_camera_counter"
+    },
+    "source_type": "camera_inferred",
+    "confidence": "medium",
+    "timestamp": "2026-05-31T00:55:09+00:00"
+  },
+  {
+    "id": "evt_21",
+    "type": "sample_moved",
+    "payload": {
+      "sample_id": "C17",
+      "from": "Bench 2",
+      "to": "Backup Freezer",
+      "from_temperature": "21C",
+      "allowed_room_temp_minutes": 20
+    },
+    "source_type": "user_reported",
+    "confidence": "medium",
+    "timestamp": "2026-05-31T00:55:35+00:00"
+  }
+]

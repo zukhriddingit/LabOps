@@ -26,6 +26,6 @@ Do NOT open the freezer door during an excursion unless moving samples to backup
 3. Do not open the door unless moving critical samples to backup storage.
 4. Identify and list all critical samples inside the unit.
 5. If temperature is above -70°C for more than 10 minutes, contact Facilities immediately.
-6. Move critical samples to backup Freezer D only when escalation threshold is confirmed met.
+6. Move critical samples to Backup Freezer only when escalation threshold is confirmed met.
 7. Check that intake vents around the unit are not obstructed.
 8. Document all observations in the incident log with timestamps.

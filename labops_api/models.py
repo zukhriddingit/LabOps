@@ -201,6 +201,8 @@ class ValidateCalculationRequest(BaseModel):
     target_percent: Optional[float] = None
     final_volume_ml: Optional[float] = None
     user_answer_ul: Optional[float] = None
+    stock_percent: Optional[float] = None
+    user_answer_g: Optional[float] = None
 
 
 class FindInventoryRequest(BaseModel):

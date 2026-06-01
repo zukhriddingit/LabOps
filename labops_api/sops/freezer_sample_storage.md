@@ -9,8 +9,8 @@ required_fields: [sample_id, storage_temperature]
 # Freezer & Sample Storage Policy
 
 ## Storage temperatures
-- Tissue samples are stored at **-60 °C** in Freezer B.
-- Freezer B alarm threshold: warmer than **-50 °C** triggers an escalation.
+- Tissue samples are stored at **-60 °C** in the Freezer.
+- Freezer alarm threshold: warmer than **-50 °C** triggers an escalation.
 
 ## Removing a sample
 1. Record sample id, source freezer, and the time removed.

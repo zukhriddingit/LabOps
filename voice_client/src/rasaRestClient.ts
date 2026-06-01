@@ -5,7 +5,7 @@ export type RasaMessage = {
   buttons?: Array<{ title: string; payload: string }>;
 };
 
-const RASA_URL = import.meta.env.VITE_RASA_REST_URL ?? "http://localhost:5005/webhooks/rest/webhook";
+const RASA_URL = import.meta.env.VITE_RASA_REST_URL ?? "http://localhost:8000/api/chat";
 
 export async function sendToRasa(message: string, sender = "labops_voice_user"): Promise<RasaMessage[]> {
   const response = await fetch(RASA_URL, {

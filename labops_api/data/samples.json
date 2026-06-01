@@ -2,25 +2,25 @@
   {
     "sample_id": "C17",
     "name": "Cardiovascular tissue sample",
-    "location": "Freezer B",
+    "location": "Backup Freezer",
     "storage_temperature": "-60C",
     "max_room_temp_minutes": 20,
     "room_temp_started_at": null,
     "room_temp_deadline": null,
     "source_type": "user_reported",
-    "confidence": "high",
-    "updated_at": "2026-05-30T02:34:25+00:00"
+    "confidence": "medium",
+    "updated_at": "2026-05-31T00:55:35+00:00"
   },
   {
     "sample_id": "A12",
     "name": "Backup tissue sample",
-    "location": "Freezer B",
+    "location": "Freezer",
     "storage_temperature": "-60C",
     "max_room_temp_minutes": 20,
     "room_temp_started_at": null,
     "room_temp_deadline": null,
     "source_type": "user_reported",
-    "confidence": "high",
-    "updated_at": "2026-05-30T02:34:25+00:00"
+    "confidence": "medium",
+    "updated_at": "2026-05-30T19:35:50+00:00"
   }
 ]

@@ -10,12 +10,14 @@ export default function HudBar() {
   const dashboardOpen = useLabStore((s) => s.dashboardOpen);
   const toggleDashboard = useLabStore((s) => s.toggleDashboard);
 
+  const incidents = useLabStore((s) => s.incidents);
   const onBench = sample.location === "Bench 2";
   const timer = onBench
     ? `${Math.min(DEMO.limitSeconds, sample.elapsedDemoSeconds)}/${sample.allowedRoomTempMinutes}m`
     : "—";
+  const openIncidents = incidents.filter((i) => i.status !== "resolved").length;
   const alerts =
-    sample.status === "critical" ? 1 : sample.status === "warning" ? 1 : 0;
+    (sample.status === "critical" || sample.status === "warning" ? 1 : 0) + openIncidents;
 
   return (
     <div className="hud">
