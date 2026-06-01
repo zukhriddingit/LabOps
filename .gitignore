@@ -38,3 +38,6 @@ web_demo/.vite/
 
 # local Claude Code tooling
 .claude/
+
+# Adjacent/local project checkout
+ResearchAI/

@@ -28,15 +28,19 @@ export interface RasaReply {
 }
 
 export async function sendRasaMessage(message: string, sender = "web_demo"): Promise<RasaReply[]> {
-  const resp = await fetch("/api/rasa", {
+  const resp = await fetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     body: JSON.stringify({ sender, message }),
   });
-  if (!resp.ok) throw new Error(`/api/rasa -> HTTP ${resp.status}`);
-  const data = (await resp.json()) as { replies?: RasaReply[] };
-  return data.replies ?? [];
+  if (!resp.ok) throw new Error(`/api/chat -> HTTP ${resp.status}`);
+  const data = (await resp.json()) as RasaReply[] | { replies?: RasaReply[] };
+  const replies = Array.isArray(data) ? data : data.replies ?? [];
+  if (replies.some((r) => /Nebius is not configured/i.test(r.text ?? ""))) {
+    throw new Error("Hosted chat LLM is not configured");
+  }
+  return replies;
 }
 
 export interface MovePayload {
